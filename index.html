@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="279">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>279</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ban-screen" class="ban hidden">
+        <div><h2>Доступ запрещён</h2><p>Ваше устройство заблокировано.</p></div>
+    </div>
+
+    <div id="app" class="container hidden">
+        <div class="header">
+            <h1><span>279</span> Группа</h1>
+            <div class="date" id="current-date"></div>
+        </div>
+
+        <div class="days" id="day-selector"></div>
+
+        <div class="now-banner" id="now-banner"></div>
+
+        <div id="schedule"></div>
+
+        <div class="footer"><a href="admin.html">админ</a></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        var now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+    }, false);
+    </script>
+</body>
+</html>

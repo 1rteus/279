@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="279 Админ">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="manifest" href="manifest.json">
+    <title>279 Админ</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:20px}
+        .login-box{background:var(--surface);border-radius:20px;padding:32px 24px;width:100%;max-width:340px;text-align:center}
+        .login-box h2{margin-bottom:20px;font-size:1.2em}
+        .login-box h2 span{color:var(--accent)}
+        .tabs{display:flex;gap:6px;margin:16px 0;overflow-x:auto;padding-bottom:4px}
+        .tab{padding:10px 14px;border:none;border-radius:12px;background:var(--surface);color:var(--dim);font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+        .tab.active{background:var(--accent);color:#fff}
+        .tab-panel{display:none}
+        .tab-panel.active{display:block}
+        .field{margin-bottom:14px}
+        .field label{display:block;font-size:0.75em;color:var(--dim);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+        .field select,.field input,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--surface2);border-radius:12px;background:var(--surface2);color:var(--text);font-size:0.9em;font-family:inherit;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
+        .field select:focus,.field input:focus,.field textarea:focus{border-color:var(--accent)}
+        .field textarea{min-height:70px;resize:vertical}
+        .btn{padding:12px 20px;border:none;border-radius:12px;font-size:0.85em;font-weight:700;cursor:pointer;transition:all 0.2s}
+        .btn:active{transform:scale(0.97)}
+        .btn-accent{background:var(--accent);color:#fff}
+        .btn-green{background:var(--green);color:#000}
+        .btn-red{background:var(--red);color:#fff}
+        .btn-sm{padding:8px 14px;font-size:0.75em}
+        .btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+        .msg{padding:10px 14px;border-radius:10px;font-size:0.8em;margin-bottom:12px}
+        .msg.ok{background:rgba(0,206,201,0.12);color:var(--green)}
+        .msg.err{background:rgba(255,107,107,0.12);color:var(--red)}
+        .item{background:var(--surface);border-radius:14px;padding:14px 16px;margin-bottom:8px}
+        .item-top{display:flex;justify-content:space-between;align-items:center}
+        .item-title{font-weight:600;font-size:0.85em}
+        .item-sub{color:var(--dim);font-size:0.78em;margin-top:4px}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.68em;font-weight:700;background:var(--red);color:#fff;margin-left:6px}
+        .back{display:inline-block;margin-bottom:16px;color:var(--dim);text-decoration:none;font-size:0.85em}
+        .admin-head{text-align:center;padding:20px 0 4px}
+        .admin-head h1{font-size:1.3em}
+        .admin-head h1 span{color:var(--accent)}
+        .admin-head p{color:var(--dim);font-size:0.8em;margin-top:2px}
+        .section-label{font-size:0.72em;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px}
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="login">
+        <div class="login-box">
+            <a href="index.html" class="back">\u2190 Назад</a>
+            <h2><span>279</span> Админ</h2>
+            <div class="field"><label>Пароль</label><input type="password" id="pw" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022"></div>
+            <div id="login-msg"></div>
+            <button class="btn btn-accent" style="width:100%" onclick="doLogin()">Войти</button>
+        </div>
+    </div>
+
+    <div id="panel" class="hidden" style="max-width:480px;margin:0 auto;padding:0 16px 40px">
+        <div class="admin-head"><h1><span>279</span> Админ</h1><p>Управление расписанием</p></div>
+
+        <div class="tabs">
+            <button class="tab active" data-t="hw">ДЗ</button>
+            <button class="tab" data-t="rep">Замены</button>
+            <button class="tab" data-t="vis">Гости</button>
+            <button class="tab" data-t="ban">Баны</button>
+        </div>
+
+        <div id="p-hw" class="tab-panel active">
+            <div class="field"><label>День</label>
+                <select id="hw-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
+            </div>
+            <div class="field"><label>Урок</label>
+                <select id="hw-num"></select>
+            </div>
+            <div class="field"><label>Задание</label>
+                <textarea id="hw-text" placeholder="Текст задания..."></textarea>
+            </div>
+            <div id="hw-msg"></div>
+            <button class="btn btn-green" onclick="addHW()">Добавить ДЗ</button>
+            <div class="section-label">Все домашние задания</div>
+            <div id="hw-all"></div>
+        </div>
+
+        <div id="p-rep" class="tab-panel">
+            <div class="field"><label>День</label>
+                <select id="rep-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
+            </div>
+            <div class="field"><label>Какой урок заменяем</label>
+                <select id="rep-num"></select>
+            </div>
+            <div class="field"><label>Заменить на предмет</label>
+                <select id="rep-subject"></select>
+            </div>
+            <div class="field"><label>Кабинет (оставь пустым = свой)</label>
+                <input id="rep-room" placeholder="Номер кабинета">
+            </div>
+            <div id="rep-msg"></div>
+            <button class="btn btn-accent" onclick="addRep()">Добавить замену</button>
+            <div class="section-label">Замены на сегодня</div>
+            <div id="rep-all"></div>
+        </div>
+
+        <div id="p-vis" class="tab-panel">
+            <button class="btn btn-accent btn-sm" onclick="renderVis()" style="margin-bottom:12px">Обновить</button>
+            <div id="vis-all"></div>
+        </div>
+
+        <div id="p-ban" class="tab-panel">
+            <button class="btn btn-accent btn-sm" onclick="renderBan()" style="margin-bottom:12px">Обновить</button>
+            <div id="ban-all"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px">
+            <button class="btn btn-red btn-sm" onclick="localStorage.removeItem('admin_ok');location.reload()">Выйти</button>
+        </div>
+    </div>
+
+    <script>
+    var PW = "279admin";
+
+    var ALL_SUBJECTS = [
+        "Материаловед","ФКиз","Биология","СПТ сл-ремонтн","Допуски, пос",
+        "Общ курс сл д","Химия","Ин язык","Математика","ннф час",
+        "География","Защита насел","Ист Бел в к ВИ","Бел язык","Бел литерат",
+        "Физика","курат час","Рус язык","Рус литерат"
+    ];
+
+    var LESSONS = {
+        1: [{n:1,nm:"Материаловед",rm:"201"},{n:2,nm:"ФКиз",rm:"2"},{n:3,nm:"Биология",rm:"305"},{n:4,nm:"СПТ сл-ремонтн",rm:"201"},{n:0,lunch:1},{n:6,nm:"Допуски, пос",rm:"401"},{n:7,nm:"Допуски, пос",rm:"401"},{n:8,nm:"Общ курс сл д",rm:"110"}],
+        2: [{n:1,nm:"Химия",rm:"301"},{n:2,nm:"Ин язык",rm:"306"},{n:3,nm:"Математика",rm:"405"},{n:4,nm:"Математика",rm:"405"},{n:5,nm:"СПТ сл-ремонтн",rm:"201"},{n:6,nm:"ннф час",rm:"102"},{n:7,nm:"География",rm:"305"},{n:8,nm:"Защита насел",rm:"403"}],
+        3: [{n:1,nm:"Ист Бел в к ВИ",rm:"101"},{n:2,nm:"Биология",rm:"305"},{n:3,nm:"СПТ сл-ремонтн",rm:"201"},{n:4,nm:"Материаловед",rm:"201"},{n:0,lunch:1},{n:6,nm:"ФКиз",rm:"2"},{n:7,nm:"Бел язык",rm:"111"},{n:8,nm:"Бел литерат",rm:"111"}],
+        4: [{n:1,nm:"Химия",rm:"301"},{n:2,nm:"География",rm:"305"},{n:3,nm:"Физика",rm:"308"},{n:4,nm:"Ин язык",rm:"306"},{n:5,nm:"Математика",rm:"405"},{n:6,nm:"курат час",rm:"101"},{n:7,nm:"Математика",rm:"405"},{n:8,nm:"Рус язык",rm:"404"},{n:9,nm:"Рус литерат",rm:"404"}],
+        5: [{n:1,nm:"Общ курс сл д",rm:"110"},{n:2,nm:"ФКиз",rm:"2"},{n:3,nm:"СПТ сл-ремонтн",rm:"201"},{n:4,nm:"Физика",rm:"308"},{n:5,nm:"Общ курс сл д",rm:"110"},{n:0,lunch:1},{n:7,nm:"Допуски, пос",rm:"401"},{n:8,nm:"Ист Бел в к ВИ",rm:"101"}]
+    };
+
+    var DN = ["","Пн","Вт","Ср","Чт","Пт"];
+
+    function gs(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+    function ss(k,v){localStorage.setItem(k,JSON.stringify(v))}
+
+    function doLogin() {
+        if (document.getElementById("pw").value === PW) {
+            ss("admin_ok", 1);
+            location.reload();
+        } else {
+            document.getElementById("login-msg").innerHTML = '<div class="msg err">Неверный пароль</div>';
+        }
+    }
+
+    document.getElementById("pw").addEventListener("keydown", function(e) { if (e.key === "Enter") doLogin(); });
+
+    if (gs("admin_ok")) {
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("panel").classList.remove("hidden");
+        initAdmin();
+    }
+
+    function initAdmin() {
+        var numSel = document.getElementById("hw-num");
+        var repNumSel = document.getElementById("rep-num");
+        for (var i = 1; i <= 9; i++) {
+            var o1 = document.createElement("option"); o1.value = i; o1.textContent = i + " урок"; numSel.appendChild(o1);
+            var o2 = document.createElement("option"); o2.value = i; o2.textContent = i + " урок"; repNumSel.appendChild(o2);
+        }
+
+        var subSel = document.getElementById("rep-subject");
+        ALL_SUBJECTS.forEach(function(s) {
+            var o = document.createElement("option"); o.value = s; o.textContent = s; subSel.appendChild(o);
+        });
+
+        document.querySelectorAll(".tab").forEach(function(t) {
+            t.addEventListener("click", function() {
+                document.querySelectorAll(".tab").forEach(function(x) { x.classList.remove("active"); });
+                document.querySelectorAll(".tab-panel").forEach(function(x) { x.classList.remove("active"); });
+                t.classList.add("active");
+                document.getElementById("p-" + t.dataset.t).classList.add("active");
+            });
+        });
+
+        renderHW();
+        renderRep();
+        renderVis();
+        renderBan();
+    }
+
+    function getLessonName(day, n) {
+        var list = LESSONS[day] || [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].n === n) return list[i].nm;
+        }
+        return "";
+    }
+
+    function findNearestLesson(subject, excludeDay, excludeNum) {
+        var startDay = 1;
+        for (var d = startDay; d <= 5; d++) {
+            var list = LESSONS[d] || [];
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].nm === subject && !(d === excludeDay && list[i].n === excludeNum)) {
+                    return { day: d, num: list[i].n };
+                }
+            }
+        }
+        return null;
+    }
+
+    function addHW() {
+        var day = document.getElementById("hw-day").value;
+        var n = +document.getElementById("hw-num").value;
+        var txt = document.getElementById("hw-text").value.trim();
+        if (!txt) { document.getElementById("hw-msg").innerHTML = '<div class="msg err">Введите задание</div>'; return; }
+        var hw = gs("hw", {});
+        if (!hw[day]) hw[day] = [];
+        var ex = -1;
+        for (var i = 0; i < hw[day].length; i++) { if (hw[day][i].n === n) { ex = i; break; } }
+        if (ex >= 0) hw[day][ex].t = txt; else hw[day].push({ n: n, t: txt });
+        ss("hw", hw);
+        document.getElementById("hw-text").value = "";
+        document.getElementById("hw-msg").innerHTML = '<div class="msg ok">Добавлено</div>';
+        setTimeout(function() { document.getElementById("hw-msg").innerHTML = ""; }, 2000);
+        renderHW();
+    }
+
+    function renderHW() {
+        var c = document.getElementById("hw-all");
+        var hw = gs("hw", {});
+        var html = "";
+        for (var d = 1; d <= 5; d++) {
+            var dayHw = hw[String(d)] || [];
+            for (var i = 0; i < dayHw.length; i++) {
+                var h = dayHw[i];
+                var name = getLessonName(d, h.n);
+                html += '<div class="item"><div class="item-top"><span class="item-title">' + DN[d] + ' \u00b7 урок ' + h.n + ': ' + name + '</span></div><div class="item-sub">' + h.t + '</div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delHW(\'' + d + '\',' + h.n + ')">Удалить</button></div></div>';
+            }
+        }
+        c.innerHTML = html || '<div class="item-sub">Нет заданий</div>';
+    }
+
+    function delHW(day, n) {
+        var hw = gs("hw", {});
+        if (hw[day]) {
+            hw[day] = hw[day].filter(function(h) { return h.n !== n; });
+            if (!hw[day].length) delete hw[day];
+        }
+        ss("hw", hw);
+        renderHW();
+    }
+
+    function addRep() {
+        var day = +document.getElementById("rep-day").value;
+        var n = +document.getElementById("rep-num").value;
+        var name = document.getElementById("rep-subject").value;
+        var room = document.getElementById("rep-room").value.trim();
+
+        var origName = getLessonName(day, n);
+        if (!name) { document.getElementById("rep-msg").innerHTML = '<div class="msg err">\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u0440\u0435\u0434\u043c\u0435\u0442</div>'; return; }
+
+        var reps = gs("reps", {});
+        var key = String(day) + "_" + new Date().toISOString().slice(0,10);
+        if (!reps[key]) reps[key] = [];
+        var ex = -1;
+        for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
+        if (ex >= 0) reps[key][ex] = { n: n, name: name, room: room }; else reps[key].push({ n: n, name: name, room: room });
+        ss("reps", reps);
+
+        var hw = gs("hw", {});
+
+        // 1. If origName lesson has HW on this day — move to nearest origName lesson
+        var dayHw = hw[String(day)] || [];
+        var hwIdx = -1;
+        for (var i = 0; i < dayHw.length; i++) { if (dayHw[i].n === n) { hwIdx = i; break; } }
+
+        if (hwIdx >= 0 && origName !== name) {
+            var hwText = dayHw[hwIdx].t;
+            dayHw.splice(hwIdx, 1);
+            hw[String(day)] = dayHw;
+            if (!hw[String(day)].length) delete hw[String(day)];
+
+            var nearest = findNearestLesson(origName, day, n);
+            if (nearest) {
+                var nKey = String(nearest.day);
+                if (!hw[nKey]) hw[nKey] = [];
+                var exists = false;
+                for (var i = 0; i < hw[nKey].length; i++) {
+                    if (hw[nKey][i].n === nearest.num) {
+                        hw[nKey][i].t += "\n\n" + origName + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[day] + "): " + hwText;
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) hw[nKey].push({ n: nearest.num, t: origName + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[day] + "): " + hwText });
+            }
+        }
+
+        // 2. Find HW for the replacement subject (name) on OTHER days — move to this day
+        if (origName !== name) {
+            for (var d = 1; d <= 5; d++) {
+                if (d === day) continue;
+                var dKey = String(d);
+                var dHw = hw[dKey] || [];
+                var moved = false;
+                for (var i = dHw.length - 1; i >= 0; i--) {
+                    var h = dHw[i];
+                    var hName = getLessonName(d, h.n);
+                    if (hName === name) {
+                        var movedText = h.t;
+                        dHw.splice(i, 1);
+                        if (!dHw.length) delete hw[dKey]; else hw[dKey] = dHw;
+
+                        if (!hw[String(day)]) hw[String(day)] = [];
+                        var exists2 = false;
+                        for (var j = 0; j < hw[String(day)].length; j++) {
+                            if (hw[String(day)][j].n === n) {
+                                hw[String(day)][j].t += "\n\n" + name + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[d] + " \u0443\u0440\u043e\u043a " + h.n + "): " + movedText;
+                                exists2 = true;
+                                break;
+                            }
+                        }
+                        if (!exists2) hw[String(day)].push({ n: n, t: name + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[d] + " \u0443\u0440\u043e\u043a " + h.n + "): " + movedText });
+                        moved = true;
+                        break;
+                    }
+                }
+                if (moved) break;
+            }
+        }
+
+        ss("hw", hw);
+        document.getElementById("rep-room").value = "";
+        document.getElementById("rep-msg").innerHTML = '<div class="msg ok">\u0417\u0430\u043c\u0435\u043d\u0430 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0430</div>';
+        setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
+        renderRep();
+        renderHW();
+    }
+
+    function renderRep() {
+        var c = document.getElementById("rep-all");
+        var reps = gs("reps", {});
+        var key = new Date().toISOString().slice(0,10);
+        var html = "";
+        for (var d = 1; d <= 5; d++) {
+            var arr = reps[String(d) + "_" + key] || [];
+            for (var i = 0; i < arr.length; i++) {
+                var r = arr[i];
+                var orig = getLessonName(d, r.n);
+                html += '<div class="item"><div class="item-top"><span class="item-title">Урок ' + r.n + ': ' + orig + ' \u2192 ' + r.name + (r.room ? ' (' + r.room + ')' : '') + '</span></div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delRep(\'' + d + '_' + key + '\',' + r.n + ')">Удалить</button></div></div>';
+            }
+        }
+        c.innerHTML = html || '<div class="item-sub">Нет замен</div>';
+    }
+
+    function delRep(key, n) {
+        var reps = gs("reps", {});
+        if (reps[key]) {
+            reps[key] = reps[key].filter(function(r) { return r.n !== n; });
+            if (!reps[key].length) delete reps[key];
+        }
+        ss("reps", reps);
+        renderRep();
+    }
+
+    function renderVis() {
+        var c = document.getElementById("vis-all");
+        var visits = gs("visits", []);
+        var banned = gs("banned", []);
+        if (!visits.length) { c.innerHTML = '<div class="item-sub">Пока нет данных. Зайди на сайт с других устройств.</div>'; return; }
+        var html = "";
+        for (var i = visits.length - 1; i >= 0; i--) {
+            var v = visits[i];
+            var b = banned.indexOf(v.id) !== -1;
+            html += '<div class="item"><div class="item-top"><span class="item-title" style="word-break:break-all">' + v.id + (b ? '<span class="badge">\u0411\u0410\u041d</span>' : '') + '</span></div>' +
+                '<div class="item-sub">' + new Date(v.ts).toLocaleString("ru-RU") + ' \u00b7 заходов: ' + v.cnt + '</div>' +
+                '<div class="item-sub" style="font-size:0.7em;word-break:break-all">' + (v.ua || '').substring(0, 100) + '</div>' +
+                '<div class="btn-row">' + (b ?
+                    '<button class="btn btn-green btn-sm" onclick="unban(\'' + v.id + '\')">Разбанить</button>' :
+                    '<button class="btn btn-red btn-sm" onclick="ban(\'' + v.id + '\')">Забанить</button>') +
+                '</div></div>';
+        }
+        c.innerHTML = html;
+    }
+
+    function ban(id) {
+        var b = gs("banned", []);
+        if (b.indexOf(id) === -1) b.push(id);
+        ss("banned", b);
+        renderVis();
+        renderBan();
+    }
+
+    function unban(id) {
+        var b = gs("banned", []).filter(function(x) { return x !== id; });
+        ss("banned", b);
+        renderVis();
+        renderBan();
+    }
+
+    function renderBan() {
+        var c = document.getElementById("ban-all");
+        var banned = gs("banned", []);
+        if (!banned.length) { c.innerHTML = '<div class="item-sub">Нет забаненных</div>'; return; }
+        var html = "";
+        for (var i = 0; i < banned.length; i++) {
+            var id = banned[i];
+            html += '<div class="item"><div class="item-top"><span class="item-title" style="word-break:break-all">' + id + ' <span class="badge">\u0411\u0410\u041d</span></span></div><div class="btn-row"><button class="btn btn-green btn-sm" onclick="unban(\'' + id + '\')">Разбанить</button></div></div>';
+        }
+        c.innerHTML = html;
+    }
+    </script>
+    <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){})</script>
+</body>
+</html>
