@@ -1,11 +1,11 @@
 {
     "name": "279 Расписание",
     "short_name": "279",
-    "description": "Расписание уроков класса 279",
+    "description": "Расписание группы 279",
     "start_url": "index.html",
     "display": "standalone",
-    "background_color": "#0f0f23",
-    "theme_color": "#1a1a2e",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
     "orientation": "portrait",
     "icons": [
         {

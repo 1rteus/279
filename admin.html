@@ -65,6 +65,7 @@
         <div class="tabs">
             <button class="tab active" data-t="hw">ДЗ</button>
             <button class="tab" data-t="rep">Замены</button>
+            <button class="tab" data-t="bell">Звонки</button>
             <button class="tab" data-t="vis">Гости</button>
             <button class="tab" data-t="ban">Баны</button>
         </div>
@@ -102,6 +103,22 @@
             <button class="btn btn-accent" onclick="addRep()">Добавить замену</button>
             <div class="section-label">Замены на сегодня</div>
             <div id="rep-all"></div>
+        </div>
+
+        <div id="p-bell" class="tab-panel">
+            <div class="field"><label>Расписание звонков</label>
+                <select id="bell-mode" onchange="setBellMode()">
+                    <option value="45">45 минут</option>
+                    <option value="35">35 минут</option>
+                    <option value="30">30 минут</option>
+                    <option value="from5">с 5-го урока</option>
+                </select>
+            </div>
+            <div class="item">
+                <div class="item-sub" id="bell-info"></div>
+            </div>
+            <div class="section-label">Текущее расписание</div>
+            <div id="bell-table"></div>
         </div>
 
         <div id="p-vis" class="tab-panel">
@@ -183,6 +200,7 @@
 
         renderHW();
         renderRep();
+        renderBell();
         renderVis();
         renderBan();
     }
@@ -248,6 +266,30 @@
         }
         ss("hw", hw);
         renderHW();
+    }
+
+    var BELL_DATA = {
+        "45": {name:"45 минут", bells:[["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:10","12:55"],["13:15","14:00"],["14:10","14:55"],["15:05","15:50"],["16:00","16:45"]]},
+        "35": {name:"35 минут", bells:[["08:30","09:05"],["09:10","09:45"],["09:50","10:25"],["10:30","11:05"],["11:10","11:45"],["11:50","12:25"],["12:30","13:05"],["13:10","13:45"],["13:50","14:25"]]},
+        "30": {name:"30 минут", bells:[["08:30","09:00"],["09:05","09:35"],["09:40","10:10"],["10:15","10:45"],["10:50","11:20"],["11:25","11:55"],["12:00","12:30"],["12:35","13:05"],["13:10","13:40"]]},
+        "from5": {name:"с 5-го урока", bells:[["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:05","12:35"],["12:40","13:10"],["13:15","13:45"],["13:50","14:20"],["14:25","14:55"]]}
+    };
+
+    function setBellMode() {
+        var mode = document.getElementById("bell-mode").value;
+        ss("bell_mode", mode);
+        renderBell();
+    }
+
+    function renderBell() {
+        var mode = gs("bell_mode", "45");
+        document.getElementById("bell-mode").value = mode;
+        var data = BELL_DATA[mode];
+        var html = "";
+        for (var i = 0; i < data.bells.length; i++) {
+            html += '<div class="item"><div class="item-top"><span class="item-title">' + (i+1) + ' урок</span><span class="item-title">' + data.bells[i][0] + ' \u2013 ' + data.bells[i][1] + '</span></div></div>';
+        }
+        document.getElementById("bell-table").innerHTML = html;
     }
 
     function addRep() {
