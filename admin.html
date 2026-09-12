@@ -359,16 +359,16 @@
                         if (!hw[nk]) hw[nk] = [];
                         var found = false;
                         for (var j = 0; j < hw[nk].length; j++) {
-                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; found = true; break; }
+                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; hw[nk][j].from = { d: day, n: n, rev: true }; found = true; break; }
                         }
-                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
+                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true } });
                     } else {
                         var nextPath = "hw_" + getWeekKey(1);
                         FirebaseDB.get(nextPath, function(nextHw) {
                             nextHw = nextHw || {};
                             var nk2 = String(day);
                             if (!nextHw[nk2]) nextHw[nk2] = [];
-                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
+                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true } });
                             FirebaseDB.set(nextPath, nextHw);
                         });
                     }
@@ -381,7 +381,7 @@
                     for (var i = dHw.length - 1; i >= 0; i--) {
                         var hName = getLessonName(d, dHw[i].n);
                         if (hName === name) {
-                            moved.push({ fromDay: d, text: dHw[i].t });
+                            moved.push({ fromDay: d, fromNum: dHw[i].n, text: dHw[i].t });
                             dHw.splice(i, 1);
                         }
                     }
@@ -395,12 +395,13 @@
                     for (var j = 0; j < hw[String(day)].length; j++) {
                         if (hw[String(day)][j].n === n) {
                             hw[String(day)][j].t += "\n\n" + label + " " + moved[m].text;
+                            hw[String(day)][j].from = { d: moved[m].fromDay, n: moved[m].fromNum };
                             existing = true;
                             break;
                         }
                     }
                     if (!existing) {
-                        hw[String(day)].push({ n: n, t: label + " " + moved[m].text });
+                        hw[String(day)].push({ n: n, t: label + " " + moved[m].text, from: { d: moved[m].fromDay, n: moved[m].fromNum } });
                     }
                 }
 
@@ -410,13 +411,68 @@
     }
 
     function delRep(key, n) {
+        var repDay = +key.split("_")[0];
+
         FirebaseDB.get("reps", function(reps) {
             reps = reps || {};
+            var repEntry = null;
             if (reps[key]) {
+                for (var i = 0; i < reps[key].length; i++) {
+                    if (reps[key][i].n === n) { repEntry = reps[key][i]; break; }
+                }
                 reps[key] = reps[key].filter(function(r) { return r.n !== n; });
                 if (!reps[key].length) delete reps[key];
             }
-            FirebaseDB.set("reps", reps).then(function() { loadRep(); });
+            FirebaseDB.set("reps", reps);
+            loadRep();
+
+            if (!repEntry) return;
+            var repSubject = repEntry.name;
+            var origName = getLessonName(repDay, n);
+            if (origName === repSubject) return;
+
+            var hwPath = "hw_" + getWeekKey(0);
+            FirebaseDB.get(hwPath, function(hw) {
+                hw = hw || {};
+                var slotHw = hw[String(repDay)] || [];
+                var toReverse = [];
+
+                for (var i = slotHw.length - 1; i >= 0; i--) {
+                    if (slotHw[i].n === n && slotHw[i].from) {
+                        var fromInfo = slotHw[i].from;
+                        if (fromInfo.rev) {
+                            toReverse.push({ text: slotHw[i].t, origDay: fromInfo.d, origN: fromInfo.n });
+                        } else {
+                            var backDay = fromInfo.d;
+                            if (!hw[String(backDay)]) hw[String(backDay)] = [];
+                            hw[String(backDay)].push({ n: fromInfo.n, t: slotHw[i].t });
+                        }
+                        slotHw.splice(i, 1);
+                    }
+                }
+                if (!slotHw.length) delete hw[String(repDay)]; else hw[String(repDay)] = slotHw;
+
+                for (var r = 0; r < toReverse.length; r++) {
+                    var rev = toReverse[r];
+                    var rk = String(rev.origDay);
+                    if (!hw[rk]) hw[rk] = [];
+                    var found = false;
+                    for (var j = 0; j < hw[rk].length; j++) {
+                        if (hw[rk][j].n === rev.origN) {
+                            var cleanText = rev.text.replace(/\n\n[^:]+: /g, "\n\n").replace(/^[^:]+: /, "");
+                            hw[rk][j].t += "\n\n" + cleanText;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        var cleanText2 = rev.text.replace(/\n\n[^:]+: /g, "\n\n").replace(/^[^:]+: /, "");
+                        hw[rk].push({ n: rev.origN, t: cleanText2 });
+                    }
+                }
+
+                FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
+            });
         });
     }
     </script>
