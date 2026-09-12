@@ -1,7 +1,7 @@
 {
-    "name": "Стикер топки книг",
-    "short_name": "279",
-    "description": "Стикер топки книг — расписание группы 279",
+    "name": "📚",
+    "short_name": "📚",
+    "description": "📚",
     "start_url": "index.html",
     "display": "standalone",
     "background_color": "#0a0a0f",
