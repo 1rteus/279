@@ -332,67 +332,52 @@
             var ex = -1;
             for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
             if (ex >= 0) reps[key][ex] = { n: n, name: name, room: room }; else reps[key].push({ n: n, name: name, room: room });
-            FirebaseDB.set("reps", reps).then(function() {
-                document.getElementById("rep-room").value = "";
-                document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
-                setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
-                loadRep();
-            });
+            FirebaseDB.set("reps", reps);
 
-            if (origName !== name) {
-                var hwPath = "hw_" + getWeekKey(0);
-                FirebaseDB.get(hwPath, function(hw) {
-                    hw = hw || {};
-                    var dayHw = hw[String(day)] || [];
-                    var hwIdx = -1;
-                    for (var i = 0; i < dayHw.length; i++) { if (dayHw[i].n === n) { hwIdx = i; break; } }
-                    if (hwIdx >= 0) {
-                        var hwText = dayHw[hwIdx].t;
-                        dayHw.splice(hwIdx, 1);
-                        if (!dayHw.length) delete hw[String(day)]; else hw[String(day)] = dayHw;
-                        var nearest = findNearestLesson(origName, day, n);
-                        if (nearest) {
-                            var nKey = String(nearest.day);
-                            if (!hw[nKey]) hw[nKey] = [];
-                            var found = false;
-                            for (var i = 0; i < hw[nKey].length; i++) {
-                                if (hw[nKey][i].n === nearest.num) { hw[nKey][i].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + hwText; found = true; break; }
-                            }
-                            if (!found) hw[nKey].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + hwText });
-                        } else {
-                            var nextPath = "hw_" + getWeekKey(1);
-                            FirebaseDB.get(nextPath, function(nextHw) {
-                                nextHw = nextHw || {};
-                                var nKey2 = String(day);
-                                if (!nextHw[nKey2]) nextHw[nKey2] = [];
-                                nextHw[nKey2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + hwText });
-                                FirebaseDB.set(nextPath, nextHw);
-                            });
-                        }
-                    }
-                    for (var d = 1; d <= 5; d++) {
-                        if (d === day) continue;
-                        var dHw = hw[String(d)] || [];
-                        for (var i = dHw.length - 1; i >= 0; i--) {
-                            var hName = getLessonName(d, dHw[i].n);
-                            if (hName === name) {
-                                var movedText = dHw[i].t;
-                                dHw.splice(i, 1);
-                                if (!dHw.length) delete hw[String(d)]; else hw[String(d)] = dHw;
-                                if (!hw[String(day)]) hw[String(day)] = [];
-                                var found2 = false;
-                                for (var j = 0; j < hw[String(day)].length; j++) {
-                                    if (hw[String(day)][j].n === n) { hw[String(day)][j].t += "\n\n" + name + " (перенесено из " + DN[d] + "): " + movedText; found2 = true; break; }
-                                }
-                                if (!found2) hw[String(day)].push({ n: n, t: name + " (перенесено из " + DN[d] + "): " + movedText });
-                                break;
-                            }
-                        }
-                    }
-                    FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
-                });
-            }
+            document.getElementById("rep-room").value = "";
+            document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
+            setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
+            loadRep();
         });
+
+        if (origName !== name) {
+            var hwPath = "hw_" + getWeekKey(0);
+            FirebaseDB.get(hwPath, function(hw) {
+                hw = hw || {};
+                var moved = [];
+
+                for (var d = 1; d <= 5; d++) {
+                    var dHw = hw[String(d)];
+                    if (!dHw) continue;
+                    for (var i = dHw.length - 1; i >= 0; i--) {
+                        var hName = getLessonName(d, dHw[i].n);
+                        if (hName === name) {
+                            moved.push({ fromDay: d, text: dHw[i].t });
+                            dHw.splice(i, 1);
+                        }
+                    }
+                    if (!dHw.length) delete hw[String(d)]; else hw[String(d)] = dHw;
+                }
+
+                if (!hw[String(day)]) hw[String(day)] = [];
+                for (var m = 0; m < moved.length; m++) {
+                    var label = name + " (перенесено из " + DN[moved[m].fromDay] + "):";
+                    var existing = false;
+                    for (var j = 0; j < hw[String(day)].length; j++) {
+                        if (hw[String(day)][j].n === n) {
+                            hw[String(day)][j].t += "\n\n" + label + " " + moved[m].text;
+                            existing = true;
+                            break;
+                        }
+                    }
+                    if (!existing) {
+                        hw[String(day)].push({ n: n, t: label + " " + moved[m].text });
+                    }
+                }
+
+                FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
+            });
+        }
     }
 
     function delRep(key, n) {
