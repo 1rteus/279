@@ -395,7 +395,7 @@
                     for (var j = 0; j < hw[String(day)].length; j++) {
                         if (hw[String(day)][j].n === n) {
                             hw[String(day)][j].t += "\n\n" + label + " " + moved[m].text;
-                            hw[String(day)][j].from = { d: moved[m].fromDay, n: moved[m].fromNum };
+                            if (!hw[String(day)][j].from) hw[String(day)][j].from = { d: moved[m].fromDay, n: moved[m].fromNum };
                             existing = true;
                             break;
                         }
