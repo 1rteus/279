@@ -359,16 +359,16 @@
                         if (!hw[nk]) hw[nk] = [];
                         var found = false;
                         for (var j = 0; j < hw[nk].length; j++) {
-                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; hw[nk][j].from = { d: day, n: n, rev: true }; found = true; break; }
+                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; if (!hw[nk][j].from) hw[nk][j].from = { d: day, n: n, rev: true, origText: origHwText }; found = true; break; }
                         }
-                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true } });
+                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true, origText: origHwText } });
                     } else {
                         var nextPath = "hw_" + getWeekKey(1);
                         FirebaseDB.get(nextPath, function(nextHw) {
                             nextHw = nextHw || {};
                             var nk2 = String(day);
                             if (!nextHw[nk2]) nextHw[nk2] = [];
-                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true } });
+                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true, origText: origHwText } });
                             FirebaseDB.set(nextPath, nextHw);
                         });
                     }
@@ -456,18 +456,17 @@
                     var rev = toReverse[r];
                     var rk = String(rev.origDay);
                     if (!hw[rk]) hw[rk] = [];
+                    var restoreText = rev.origText || rev.text;
                     var found = false;
                     for (var j = 0; j < hw[rk].length; j++) {
                         if (hw[rk][j].n === rev.origN) {
-                            var cleanText = rev.text.replace(/\n\n[^:]+: /g, "\n\n").replace(/^[^:]+: /, "");
-                            hw[rk][j].t += "\n\n" + cleanText;
+                            hw[rk][j].t += "\n\n" + restoreText;
                             found = true;
                             break;
                         }
                     }
                     if (!found) {
-                        var cleanText2 = rev.text.replace(/\n\n[^:]+: /g, "\n\n").replace(/^[^:]+: /, "");
-                        hw[rk].push({ n: rev.origN, t: cleanText2 });
+                        hw[rk].push({ n: rev.origN, t: restoreText });
                     }
                 }
 
