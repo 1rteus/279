@@ -326,24 +326,28 @@
         var dateStr = formatDate(targetDate);
         var key = String(day) + "_" + dateStr;
 
-        FirebaseDB.get("reps", function(reps) {
-            reps = reps || {};
-            if (!reps[key]) reps[key] = [];
-            var ex = -1;
-            for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
-            if (ex >= 0) reps[key][ex] = { n: n, name: name, room: room }; else reps[key].push({ n: n, name: name, room: room });
-            FirebaseDB.set("reps", reps);
+        var hwPath = "hw_" + getWeekKey(0);
 
-            document.getElementById("rep-room").value = "";
-            document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
-            setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
-            loadRep();
-        });
+        FirebaseDB.get(hwPath, function(hwBefore) {
+            hwBefore = hwBefore || {};
 
-        if (origName !== name) {
-            var hwPath = "hw_" + getWeekKey(0);
-            FirebaseDB.get(hwPath, function(hw) {
-                hw = hw || {};
+            FirebaseDB.get("reps", function(reps) {
+                reps = reps || {};
+                if (!reps[key]) reps[key] = [];
+                var ex = -1;
+                for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
+                var repObj = { n: n, name: name, room: room, hwSnapshot: hwBefore };
+                if (ex >= 0) reps[key][ex] = repObj; else reps[key].push(repObj);
+                FirebaseDB.set("reps", reps);
+
+                document.getElementById("rep-room").value = "";
+                document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
+                setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
+                loadRep();
+            });
+
+            if (origName !== name) {
+                var hw = JSON.parse(JSON.stringify(hwBefore));
 
                 var slotHw = hw[String(day)] || [];
                 var slotIdx = -1;
@@ -359,16 +363,16 @@
                         if (!hw[nk]) hw[nk] = [];
                         var found = false;
                         for (var j = 0; j < hw[nk].length; j++) {
-                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; if (!hw[nk][j].from) hw[nk][j].from = { d: day, n: n, rev: true, origText: origHwText }; found = true; break; }
+                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; found = true; break; }
                         }
-                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true, origText: origHwText } });
+                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
                     } else {
                         var nextPath = "hw_" + getWeekKey(1);
                         FirebaseDB.get(nextPath, function(nextHw) {
                             nextHw = nextHw || {};
                             var nk2 = String(day);
                             if (!nextHw[nk2]) nextHw[nk2] = [];
-                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText, from: { d: day, n: n, rev: true, origText: origHwText } });
+                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
                             FirebaseDB.set(nextPath, nextHw);
                         });
                     }
@@ -381,7 +385,7 @@
                     for (var i = dHw.length - 1; i >= 0; i--) {
                         var hName = getLessonName(d, dHw[i].n);
                         if (hName === name) {
-                            moved.push({ fromDay: d, fromNum: dHw[i].n, text: dHw[i].t });
+                            moved.push({ fromDay: d, text: dHw[i].t });
                             dHw.splice(i, 1);
                         }
                     }
@@ -395,24 +399,21 @@
                     for (var j = 0; j < hw[String(day)].length; j++) {
                         if (hw[String(day)][j].n === n) {
                             hw[String(day)][j].t += "\n\n" + label + " " + moved[m].text;
-                            if (!hw[String(day)][j].from) hw[String(day)][j].from = { d: moved[m].fromDay, n: moved[m].fromNum };
                             existing = true;
                             break;
                         }
                     }
                     if (!existing) {
-                        hw[String(day)].push({ n: n, t: label + " " + moved[m].text, from: { d: moved[m].fromDay, n: moved[m].fromNum } });
+                        hw[String(day)].push({ n: n, t: label + " " + moved[m].text });
                     }
                 }
 
                 FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
-            });
-        }
+            }
+        });
     }
 
     function delRep(key, n) {
-        var repDay = +key.split("_")[0];
-
         FirebaseDB.get("reps", function(reps) {
             reps = reps || {};
             var repEntry = null;
@@ -426,52 +427,10 @@
             FirebaseDB.set("reps", reps);
             loadRep();
 
-            if (!repEntry) return;
-            var repSubject = repEntry.name;
-            var origName = getLessonName(repDay, n);
-            if (origName === repSubject) return;
-
-            var hwPath = "hw_" + getWeekKey(0);
-            FirebaseDB.get(hwPath, function(hw) {
-                hw = hw || {};
-                var slotHw = hw[String(repDay)] || [];
-                var toReverse = [];
-
-                for (var i = slotHw.length - 1; i >= 0; i--) {
-                    if (slotHw[i].n === n && slotHw[i].from) {
-                        var fromInfo = slotHw[i].from;
-                        if (fromInfo.rev) {
-                            toReverse.push({ text: slotHw[i].t, origDay: fromInfo.d, origN: fromInfo.n });
-                        } else {
-                            var backDay = fromInfo.d;
-                            if (!hw[String(backDay)]) hw[String(backDay)] = [];
-                            hw[String(backDay)].push({ n: fromInfo.n, t: slotHw[i].t });
-                        }
-                        slotHw.splice(i, 1);
-                    }
-                }
-                if (!slotHw.length) delete hw[String(repDay)]; else hw[String(repDay)] = slotHw;
-
-                for (var r = 0; r < toReverse.length; r++) {
-                    var rev = toReverse[r];
-                    var rk = String(rev.origDay);
-                    if (!hw[rk]) hw[rk] = [];
-                    var restoreText = rev.origText || rev.text;
-                    var found = false;
-                    for (var j = 0; j < hw[rk].length; j++) {
-                        if (hw[rk][j].n === rev.origN) {
-                            hw[rk][j].t += "\n\n" + restoreText;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        hw[rk].push({ n: rev.origN, t: restoreText });
-                    }
-                }
-
-                FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
-            });
+            if (repEntry && repEntry.hwSnapshot) {
+                var hwPath = "hw_" + getWeekKey(0);
+                FirebaseDB.set(hwPath, repEntry.hwSnapshot).then(function() { loadHW(); });
+            }
         });
     }
     </script>
