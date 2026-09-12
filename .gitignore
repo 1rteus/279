@@ -1,6 +1,3 @@
-# Secret config (Firebase credentials)
-firebase-config.js
-
 # Local server
 run.py
 run.sh
