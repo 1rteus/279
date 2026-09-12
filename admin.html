@@ -344,8 +344,37 @@
             var hwPath = "hw_" + getWeekKey(0);
             FirebaseDB.get(hwPath, function(hw) {
                 hw = hw || {};
-                var moved = [];
 
+                var slotHw = hw[String(day)] || [];
+                var slotIdx = -1;
+                for (var i = 0; i < slotHw.length; i++) { if (slotHw[i].n === n) { slotIdx = i; break; } }
+                if (slotIdx >= 0) {
+                    var origHwText = slotHw[slotIdx].t;
+                    slotHw.splice(slotIdx, 1);
+                    if (!slotHw.length) delete hw[String(day)]; else hw[String(day)] = slotHw;
+
+                    var nearest = findNearestLesson(origName, day, n);
+                    if (nearest) {
+                        var nk = String(nearest.day);
+                        if (!hw[nk]) hw[nk] = [];
+                        var found = false;
+                        for (var j = 0; j < hw[nk].length; j++) {
+                            if (hw[nk][j].n === nearest.num) { hw[nk][j].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + origHwText; found = true; break; }
+                        }
+                        if (!found) hw[nk].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
+                    } else {
+                        var nextPath = "hw_" + getWeekKey(1);
+                        FirebaseDB.get(nextPath, function(nextHw) {
+                            nextHw = nextHw || {};
+                            var nk2 = String(day);
+                            if (!nextHw[nk2]) nextHw[nk2] = [];
+                            nextHw[nk2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + origHwText });
+                            FirebaseDB.set(nextPath, nextHw);
+                        });
+                    }
+                }
+
+                var moved = [];
                 for (var d = 1; d <= 5; d++) {
                     var dHw = hw[String(d)];
                     if (!dHw) continue;
