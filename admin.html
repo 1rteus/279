@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="279 Админ">
+    <meta name="apple-mobile-web-app-title" content="Стикер топки книг">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
-    <title>279 Админ</title>
+    <title>Админ</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-db.js"></script>
     <style>
         .login{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:20px}
         .login-box{background:var(--surface);border-radius:20px;padding:32px 24px;width:100%;max-width:340px;text-align:center}
@@ -39,38 +43,41 @@
         .item-top{display:flex;justify-content:space-between;align-items:center}
         .item-title{font-weight:600;font-size:0.85em}
         .item-sub{color:var(--dim);font-size:0.78em;margin-top:4px}
-        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.68em;font-weight:700;background:var(--red);color:#fff;margin-left:6px}
         .back{display:inline-block;margin-bottom:16px;color:var(--dim);text-decoration:none;font-size:0.85em}
         .admin-head{text-align:center;padding:20px 0 4px}
         .admin-head h1{font-size:1.3em}
         .admin-head h1 span{color:var(--accent)}
         .admin-head p{color:var(--dim);font-size:0.8em;margin-top:2px}
         .section-label{font-size:0.72em;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px}
+        .week-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
+        .week-nav .btn{background:var(--surface2);color:var(--dim)}
     </style>
 </head>
 <body>
     <div id="login-screen" class="login">
         <div class="login-box">
-            <a href="index.html" class="back">\u2190 Назад</a>
+            <a href="index.html" class="back">&larr; Назад</a>
             <h2><span>279</span> Админ</h2>
-            <div class="field"><label>Пароль</label><input type="password" id="pw" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022"></div>
+            <div class="field"><label>Пароль</label><input type="password" id="pw" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;"></div>
             <div id="login-msg"></div>
             <button class="btn btn-accent" style="width:100%" onclick="doLogin()">Войти</button>
         </div>
     </div>
 
     <div id="panel" class="hidden" style="max-width:480px;margin:0 auto;padding:0 16px 40px">
-        <div class="admin-head"><h1><span>279</span> Админ</h1><p>Управление расписанием</p></div>
+        <div class="admin-head"><h1><span>279</span> Админ</h1><p>Стикер топки книг — управление</p></div>
 
         <div class="tabs">
             <button class="tab active" data-t="hw">ДЗ</button>
             <button class="tab" data-t="rep">Замены</button>
-            <button class="tab" data-t="bell">Звонки</button>
-            <button class="tab" data-t="vis">Гости</button>
-            <button class="tab" data-t="ban">Баны</button>
         </div>
 
         <div id="p-hw" class="tab-panel active">
+            <div class="week-nav">
+                <button class="btn btn-sm" onclick="changeHWWeek(-1)">&#8249; Неделя</button>
+                <span id="hw-week-label" style="font-size:0.8em;font-weight:600;color:var(--dim)">Эта неделя</span>
+                <button class="btn btn-sm" onclick="changeHWWeek(1)">Неделя &#8250;</button>
+            </div>
             <div class="field"><label>День</label>
                 <select id="hw-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
             </div>
@@ -82,12 +89,12 @@
             </div>
             <div id="hw-msg"></div>
             <button class="btn btn-green" onclick="addHW()">Добавить ДЗ</button>
-            <div class="section-label">Все домашние задания</div>
+            <div class="section-label">Домашние задания</div>
             <div id="hw-all"></div>
         </div>
 
         <div id="p-rep" class="tab-panel">
-            <div class="field"><label>День</label>
+            <div class="field"><label>День недели замены</label>
                 <select id="rep-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
             </div>
             <div class="field"><label>Какой урок заменяем</label>
@@ -101,34 +108,8 @@
             </div>
             <div id="rep-msg"></div>
             <button class="btn btn-accent" onclick="addRep()">Добавить замену</button>
-            <div class="section-label">Замены на сегодня</div>
+            <div class="section-label">Все замены на этой неделе</div>
             <div id="rep-all"></div>
-        </div>
-
-        <div id="p-bell" class="tab-panel">
-            <div class="field"><label>Расписание звонков</label>
-                <select id="bell-mode" onchange="setBellMode()">
-                    <option value="45">45 минут</option>
-                    <option value="35">35 минут</option>
-                    <option value="30">30 минут</option>
-                    <option value="from5">с 5-го урока</option>
-                </select>
-            </div>
-            <div class="item">
-                <div class="item-sub" id="bell-info"></div>
-            </div>
-            <div class="section-label">Текущее расписание</div>
-            <div id="bell-table"></div>
-        </div>
-
-        <div id="p-vis" class="tab-panel">
-            <button class="btn btn-accent btn-sm" onclick="renderVis()" style="margin-bottom:12px">Обновить</button>
-            <div id="vis-all"></div>
-        </div>
-
-        <div id="p-ban" class="tab-panel">
-            <button class="btn btn-accent btn-sm" onclick="renderBan()" style="margin-bottom:12px">Обновить</button>
-            <div id="ban-all"></div>
         </div>
 
         <div style="text-align:center;margin-top:24px">
@@ -137,7 +118,8 @@
     </div>
 
     <script>
-    var PW = "279admin";
+    var PW_FALLBACK = "279admin";
+    var hwWeekOffset = 0;
 
     var ALL_SUBJECTS = [
         "Материаловед","ФКиз","Биология","СПТ сл-ремонтн","Допуски, пос",
@@ -156,21 +138,54 @@
 
     var DN = ["","Пн","Вт","Ср","Чт","Пт"];
 
-    function gs(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
-    function ss(k,v){localStorage.setItem(k,JSON.stringify(v))}
+    function getMonday(d) {
+        var date = new Date(d);
+        var day = date.getDay();
+        var diff = day === 0 ? -6 : 1 - day;
+        date.setDate(date.getDate() + diff);
+        return date;
+    }
+
+    function formatDate(d) {
+        return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+    }
+
+    function getWeekKey(offset) {
+        var now = new Date();
+        var monday = getMonday(now);
+        monday.setDate(monday.getDate() + (offset * 7));
+        return formatDate(monday);
+    }
+
+    function getWeekLabel(offset) {
+        if (offset === 0) return "Эта неделя";
+        return "Следующая";
+    }
+
+    function getLessonName(day, n) {
+        var list = LESSONS[day] || [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].n === n) return list[i].nm;
+        }
+        return "";
+    }
 
     function doLogin() {
-        if (document.getElementById("pw").value === PW) {
-            ss("admin_ok", 1);
-            location.reload();
-        } else {
-            document.getElementById("login-msg").innerHTML = '<div class="msg err">Неверный пароль</div>';
-        }
+        var pw = document.getElementById("pw").value;
+        FirebaseDB.get("config_admin_pw", function(data) {
+            var correctPw = (data && data.value) ? data.value : PW_FALLBACK;
+            if (pw === correctPw) {
+                localStorage.setItem("admin_ok", "1");
+                location.reload();
+            } else {
+                document.getElementById("login-msg").innerHTML = '<div class="msg err">Неверный пароль</div>';
+            }
+        });
     }
 
     document.getElementById("pw").addEventListener("keydown", function(e) { if (e.key === "Enter") doLogin(); });
 
-    if (gs("admin_ok")) {
+    if (localStorage.getItem("admin_ok")) {
         document.getElementById("login-screen").classList.add("hidden");
         document.getElementById("panel").classList.remove("hidden");
         initAdmin();
@@ -198,24 +213,61 @@
             });
         });
 
-        renderHW();
-        renderRep();
-        renderBell();
-        renderVis();
-        renderBan();
+        loadHW();
+        loadRep();
     }
 
-    function getLessonName(day, n) {
-        var list = LESSONS[day] || [];
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].n === n) return list[i].nm;
-        }
-        return "";
+    function changeHWWeek(dir) {
+        hwWeekOffset += dir;
+        if (hwWeekOffset > 1) hwWeekOffset = 1;
+        if (hwWeekOffset < 0) hwWeekOffset = 0;
+        document.getElementById("hw-week-label").textContent = getWeekLabel(hwWeekOffset);
+        loadHW();
+    }
+
+    function loadHW() {
+        var path = "hw_" + getWeekKey(hwWeekOffset);
+        FirebaseDB.get(path, function(hw) {
+            hw = hw || {};
+            var c = document.getElementById("hw-all");
+            var html = "";
+            for (var d = 1; d <= 5; d++) {
+                var dayHw = hw[String(d)] || [];
+                for (var i = 0; i < dayHw.length; i++) {
+                    var h = dayHw[i];
+                    var name = getLessonName(d, h.n);
+                    html += '<div class="item"><div class="item-top"><span class="item-title">' + DN[d] + ' · урок ' + h.n + ': ' + name + '</span></div><div class="item-sub">' + h.t + '</div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delHW(\'' + d + '\',' + h.n + ')">Удалить</button></div></div>';
+                }
+            }
+            c.innerHTML = html || '<div class="item-sub">Нет заданий</div>';
+        });
+    }
+
+    function loadRep() {
+        FirebaseDB.get("reps", function(reps) {
+            reps = reps || {};
+            var c = document.getElementById("rep-all");
+            var now = new Date();
+            var monday = getMonday(now);
+            var html = "";
+            for (var d = 1; d <= 5; d++) {
+                var dayDate = new Date(monday);
+                dayDate.setDate(monday.getDate() + (d - 1));
+                var dateStr = formatDate(dayDate);
+                var key = String(d) + "_" + dateStr;
+                var arr = reps[key] || [];
+                for (var i = 0; i < arr.length; i++) {
+                    var r = arr[i];
+                    var orig = getLessonName(d, r.n);
+                    html += '<div class="item"><div class="item-top"><span class="item-title">' + DN[d] + ' · урок ' + r.n + ': ' + orig + ' → ' + r.name + (r.room ? ' (' + r.room + ')' : '') + '</span></div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delRep(\'' + key + '\',' + r.n + ')">Удалить</button></div></div>';
+                }
+            }
+            c.innerHTML = html || '<div class="item-sub">Нет замен на этой неделе</div>';
+        });
     }
 
     function findNearestLesson(subject, excludeDay, excludeNum) {
-        var startDay = 1;
-        for (var d = startDay; d <= 5; d++) {
+        for (var d = 1; d <= 5; d++) {
             var list = LESSONS[d] || [];
             for (var i = 0; i < list.length; i++) {
                 if (list[i].nm === subject && !(d === excludeDay && list[i].n === excludeNum)) {
@@ -231,65 +283,32 @@
         var n = +document.getElementById("hw-num").value;
         var txt = document.getElementById("hw-text").value.trim();
         if (!txt) { document.getElementById("hw-msg").innerHTML = '<div class="msg err">Введите задание</div>'; return; }
-        var hw = gs("hw", {});
-        if (!hw[day]) hw[day] = [];
-        var ex = -1;
-        for (var i = 0; i < hw[day].length; i++) { if (hw[day][i].n === n) { ex = i; break; } }
-        if (ex >= 0) hw[day][ex].t = txt; else hw[day].push({ n: n, t: txt });
-        ss("hw", hw);
-        document.getElementById("hw-text").value = "";
-        document.getElementById("hw-msg").innerHTML = '<div class="msg ok">Добавлено</div>';
-        setTimeout(function() { document.getElementById("hw-msg").innerHTML = ""; }, 2000);
-        renderHW();
-    }
-
-    function renderHW() {
-        var c = document.getElementById("hw-all");
-        var hw = gs("hw", {});
-        var html = "";
-        for (var d = 1; d <= 5; d++) {
-            var dayHw = hw[String(d)] || [];
-            for (var i = 0; i < dayHw.length; i++) {
-                var h = dayHw[i];
-                var name = getLessonName(d, h.n);
-                html += '<div class="item"><div class="item-top"><span class="item-title">' + DN[d] + ' \u00b7 урок ' + h.n + ': ' + name + '</span></div><div class="item-sub">' + h.t + '</div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delHW(\'' + d + '\',' + h.n + ')">Удалить</button></div></div>';
-            }
-        }
-        c.innerHTML = html || '<div class="item-sub">Нет заданий</div>';
+        var path = "hw_" + getWeekKey(hwWeekOffset);
+        FirebaseDB.get(path, function(hw) {
+            hw = hw || {};
+            if (!hw[day]) hw[day] = [];
+            var ex = -1;
+            for (var i = 0; i < hw[day].length; i++) { if (hw[day][i].n === n) { ex = i; break; } }
+            if (ex >= 0) hw[day][ex].t = txt; else hw[day].push({ n: n, t: txt });
+            FirebaseDB.set(path, hw).then(function() {
+                document.getElementById("hw-text").value = "";
+                document.getElementById("hw-msg").innerHTML = '<div class="msg ok">Добавлено</div>';
+                setTimeout(function() { document.getElementById("hw-msg").innerHTML = ""; }, 2000);
+                loadHW();
+            });
+        });
     }
 
     function delHW(day, n) {
-        var hw = gs("hw", {});
-        if (hw[day]) {
-            hw[day] = hw[day].filter(function(h) { return h.n !== n; });
-            if (!hw[day].length) delete hw[day];
-        }
-        ss("hw", hw);
-        renderHW();
-    }
-
-    var BELL_DATA = {
-        "45": {name:"45 минут", bells:[["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:10","12:55"],["13:15","14:00"],["14:10","14:55"],["15:05","15:50"],["16:00","16:45"]]},
-        "35": {name:"35 минут", bells:[["08:30","09:05"],["09:10","09:45"],["09:50","10:25"],["10:30","11:05"],["11:10","11:45"],["11:50","12:25"],["12:30","13:05"],["13:10","13:45"],["13:50","14:25"]]},
-        "30": {name:"30 минут", bells:[["08:30","09:00"],["09:05","09:35"],["09:40","10:10"],["10:15","10:45"],["10:50","11:20"],["11:25","11:55"],["12:00","12:30"],["12:35","13:05"],["13:10","13:40"]]},
-        "from5": {name:"с 5-го урока", bells:[["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:05","12:35"],["12:40","13:10"],["13:15","13:45"],["13:50","14:20"],["14:25","14:55"]]}
-    };
-
-    function setBellMode() {
-        var mode = document.getElementById("bell-mode").value;
-        ss("bell_mode", mode);
-        renderBell();
-    }
-
-    function renderBell() {
-        var mode = gs("bell_mode", "45");
-        document.getElementById("bell-mode").value = mode;
-        var data = BELL_DATA[mode];
-        var html = "";
-        for (var i = 0; i < data.bells.length; i++) {
-            html += '<div class="item"><div class="item-top"><span class="item-title">' + (i+1) + ' урок</span><span class="item-title">' + data.bells[i][0] + ' \u2013 ' + data.bells[i][1] + '</span></div></div>';
-        }
-        document.getElementById("bell-table").innerHTML = html;
+        var path = "hw_" + getWeekKey(hwWeekOffset);
+        FirebaseDB.get(path, function(hw) {
+            hw = hw || {};
+            if (hw[day]) {
+                hw[day] = hw[day].filter(function(h) { return h.n !== n; });
+                if (!hw[day].length) delete hw[day];
+            }
+            FirebaseDB.set(path, hw).then(function() { loadHW(); });
+        });
     }
 
     function addRep() {
@@ -297,161 +316,95 @@
         var n = +document.getElementById("rep-num").value;
         var name = document.getElementById("rep-subject").value;
         var room = document.getElementById("rep-room").value.trim();
-
         var origName = getLessonName(day, n);
-        if (!name) { document.getElementById("rep-msg").innerHTML = '<div class="msg err">\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u0440\u0435\u0434\u043c\u0435\u0442</div>'; return; }
+        if (!name) { document.getElementById("rep-msg").innerHTML = '<div class="msg err">Выбери предмет</div>'; return; }
 
-        var reps = gs("reps", {});
-        var key = String(day) + "_" + new Date().toISOString().slice(0,10);
-        if (!reps[key]) reps[key] = [];
-        var ex = -1;
-        for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
-        if (ex >= 0) reps[key][ex] = { n: n, name: name, room: room }; else reps[key].push({ n: n, name: name, room: room });
-        ss("reps", reps);
+        var now = new Date();
+        var monday = getMonday(now);
+        var targetDate = new Date(monday);
+        targetDate.setDate(monday.getDate() + (day - 1));
+        var dateStr = formatDate(targetDate);
+        var key = String(day) + "_" + dateStr;
 
-        var hw = gs("hw", {});
+        FirebaseDB.get("reps", function(reps) {
+            reps = reps || {};
+            if (!reps[key]) reps[key] = [];
+            var ex = -1;
+            for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
+            if (ex >= 0) reps[key][ex] = { n: n, name: name, room: room }; else reps[key].push({ n: n, name: name, room: room });
+            FirebaseDB.set("reps", reps).then(function() {
+                document.getElementById("rep-room").value = "";
+                document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
+                setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
+                loadRep();
+            });
 
-        // 1. If origName lesson has HW on this day — move to nearest origName lesson
-        var dayHw = hw[String(day)] || [];
-        var hwIdx = -1;
-        for (var i = 0; i < dayHw.length; i++) { if (dayHw[i].n === n) { hwIdx = i; break; } }
-
-        if (hwIdx >= 0 && origName !== name) {
-            var hwText = dayHw[hwIdx].t;
-            dayHw.splice(hwIdx, 1);
-            hw[String(day)] = dayHw;
-            if (!hw[String(day)].length) delete hw[String(day)];
-
-            var nearest = findNearestLesson(origName, day, n);
-            if (nearest) {
-                var nKey = String(nearest.day);
-                if (!hw[nKey]) hw[nKey] = [];
-                var exists = false;
-                for (var i = 0; i < hw[nKey].length; i++) {
-                    if (hw[nKey][i].n === nearest.num) {
-                        hw[nKey][i].t += "\n\n" + origName + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[day] + "): " + hwText;
-                        exists = true;
-                        break;
+            if (origName !== name) {
+                var hwPath = "hw_" + getWeekKey(0);
+                FirebaseDB.get(hwPath, function(hw) {
+                    hw = hw || {};
+                    var dayHw = hw[String(day)] || [];
+                    var hwIdx = -1;
+                    for (var i = 0; i < dayHw.length; i++) { if (dayHw[i].n === n) { hwIdx = i; break; } }
+                    if (hwIdx >= 0) {
+                        var hwText = dayHw[hwIdx].t;
+                        dayHw.splice(hwIdx, 1);
+                        if (!dayHw.length) delete hw[String(day)]; else hw[String(day)] = dayHw;
+                        var nearest = findNearestLesson(origName, day, n);
+                        if (nearest) {
+                            var nKey = String(nearest.day);
+                            if (!hw[nKey]) hw[nKey] = [];
+                            var found = false;
+                            for (var i = 0; i < hw[nKey].length; i++) {
+                                if (hw[nKey][i].n === nearest.num) { hw[nKey][i].t += "\n\n" + origName + " (перенесено из " + DN[day] + "): " + hwText; found = true; break; }
+                            }
+                            if (!found) hw[nKey].push({ n: nearest.num, t: origName + " (перенесено из " + DN[day] + "): " + hwText });
+                        } else {
+                            var nextPath = "hw_" + getWeekKey(1);
+                            FirebaseDB.get(nextPath, function(nextHw) {
+                                nextHw = nextHw || {};
+                                var nKey2 = String(day);
+                                if (!nextHw[nKey2]) nextHw[nKey2] = [];
+                                nextHw[nKey2].push({ n: n, t: origName + " (перенесено из " + DN[day] + "): " + hwText });
+                                FirebaseDB.set(nextPath, nextHw);
+                            });
+                        }
                     }
-                }
-                if (!exists) hw[nKey].push({ n: nearest.num, t: origName + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[day] + "): " + hwText });
-            }
-        }
-
-        // 2. Find HW for the replacement subject (name) on OTHER days — move to this day
-        if (origName !== name) {
-            for (var d = 1; d <= 5; d++) {
-                if (d === day) continue;
-                var dKey = String(d);
-                var dHw = hw[dKey] || [];
-                var moved = false;
-                for (var i = dHw.length - 1; i >= 0; i--) {
-                    var h = dHw[i];
-                    var hName = getLessonName(d, h.n);
-                    if (hName === name) {
-                        var movedText = h.t;
-                        dHw.splice(i, 1);
-                        if (!dHw.length) delete hw[dKey]; else hw[dKey] = dHw;
-
-                        if (!hw[String(day)]) hw[String(day)] = [];
-                        var exists2 = false;
-                        for (var j = 0; j < hw[String(day)].length; j++) {
-                            if (hw[String(day)][j].n === n) {
-                                hw[String(day)][j].t += "\n\n" + name + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[d] + " \u0443\u0440\u043e\u043a " + h.n + "): " + movedText;
-                                exists2 = true;
+                    for (var d = 1; d <= 5; d++) {
+                        if (d === day) continue;
+                        var dHw = hw[String(d)] || [];
+                        for (var i = dHw.length - 1; i >= 0; i--) {
+                            var hName = getLessonName(d, dHw[i].n);
+                            if (hName === name) {
+                                var movedText = dHw[i].t;
+                                dHw.splice(i, 1);
+                                if (!dHw.length) delete hw[String(d)]; else hw[String(d)] = dHw;
+                                if (!hw[String(day)]) hw[String(day)] = [];
+                                var found2 = false;
+                                for (var j = 0; j < hw[String(day)].length; j++) {
+                                    if (hw[String(day)][j].n === n) { hw[String(day)][j].t += "\n\n" + name + " (перенесено из " + DN[d] + "): " + movedText; found2 = true; break; }
+                                }
+                                if (!found2) hw[String(day)].push({ n: n, t: name + " (перенесено из " + DN[d] + "): " + movedText });
                                 break;
                             }
                         }
-                        if (!exists2) hw[String(day)].push({ n: n, t: name + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[d] + " \u0443\u0440\u043e\u043a " + h.n + "): " + movedText });
-                        moved = true;
-                        break;
                     }
-                }
-                if (moved) break;
+                    FirebaseDB.set(hwPath, hw).then(function() { loadHW(); });
+                });
             }
-        }
-
-        ss("hw", hw);
-        document.getElementById("rep-room").value = "";
-        document.getElementById("rep-msg").innerHTML = '<div class="msg ok">\u0417\u0430\u043c\u0435\u043d\u0430 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0430</div>';
-        setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
-        renderRep();
-        renderHW();
-    }
-
-    function renderRep() {
-        var c = document.getElementById("rep-all");
-        var reps = gs("reps", {});
-        var key = new Date().toISOString().slice(0,10);
-        var html = "";
-        for (var d = 1; d <= 5; d++) {
-            var arr = reps[String(d) + "_" + key] || [];
-            for (var i = 0; i < arr.length; i++) {
-                var r = arr[i];
-                var orig = getLessonName(d, r.n);
-                html += '<div class="item"><div class="item-top"><span class="item-title">Урок ' + r.n + ': ' + orig + ' \u2192 ' + r.name + (r.room ? ' (' + r.room + ')' : '') + '</span></div><div class="btn-row"><button class="btn btn-red btn-sm" onclick="delRep(\'' + d + '_' + key + '\',' + r.n + ')">Удалить</button></div></div>';
-            }
-        }
-        c.innerHTML = html || '<div class="item-sub">Нет замен</div>';
+        });
     }
 
     function delRep(key, n) {
-        var reps = gs("reps", {});
-        if (reps[key]) {
-            reps[key] = reps[key].filter(function(r) { return r.n !== n; });
-            if (!reps[key].length) delete reps[key];
-        }
-        ss("reps", reps);
-        renderRep();
-    }
-
-    function renderVis() {
-        var c = document.getElementById("vis-all");
-        var visits = gs("visits", []);
-        var banned = gs("banned", []);
-        if (!visits.length) { c.innerHTML = '<div class="item-sub">Пока нет данных. Зайди на сайт с других устройств.</div>'; return; }
-        var html = "";
-        for (var i = visits.length - 1; i >= 0; i--) {
-            var v = visits[i];
-            var b = banned.indexOf(v.id) !== -1;
-            html += '<div class="item"><div class="item-top"><span class="item-title" style="word-break:break-all">' + v.id + (b ? '<span class="badge">\u0411\u0410\u041d</span>' : '') + '</span></div>' +
-                '<div class="item-sub">' + new Date(v.ts).toLocaleString("ru-RU") + ' \u00b7 заходов: ' + v.cnt + '</div>' +
-                '<div class="item-sub" style="font-size:0.7em;word-break:break-all">' + (v.ua || '').substring(0, 100) + '</div>' +
-                '<div class="btn-row">' + (b ?
-                    '<button class="btn btn-green btn-sm" onclick="unban(\'' + v.id + '\')">Разбанить</button>' :
-                    '<button class="btn btn-red btn-sm" onclick="ban(\'' + v.id + '\')">Забанить</button>') +
-                '</div></div>';
-        }
-        c.innerHTML = html;
-    }
-
-    function ban(id) {
-        var b = gs("banned", []);
-        if (b.indexOf(id) === -1) b.push(id);
-        ss("banned", b);
-        renderVis();
-        renderBan();
-    }
-
-    function unban(id) {
-        var b = gs("banned", []).filter(function(x) { return x !== id; });
-        ss("banned", b);
-        renderVis();
-        renderBan();
-    }
-
-    function renderBan() {
-        var c = document.getElementById("ban-all");
-        var banned = gs("banned", []);
-        if (!banned.length) { c.innerHTML = '<div class="item-sub">Нет забаненных</div>'; return; }
-        var html = "";
-        for (var i = 0; i < banned.length; i++) {
-            var id = banned[i];
-            html += '<div class="item"><div class="item-top"><span class="item-title" style="word-break:break-all">' + id + ' <span class="badge">\u0411\u0410\u041d</span></span></div><div class="btn-row"><button class="btn btn-green btn-sm" onclick="unban(\'' + id + '\')">Разбанить</button></div></div>';
-        }
-        c.innerHTML = html;
+        FirebaseDB.get("reps", function(reps) {
+            reps = reps || {};
+            if (reps[key]) {
+                reps[key] = reps[key].filter(function(r) { return r.n !== n; });
+                if (!reps[key].length) delete reps[key];
+            }
+            FirebaseDB.set("reps", reps).then(function() { loadRep(); });
+        });
     }
     </script>
-    <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){})</script>
 </body>
 </html>

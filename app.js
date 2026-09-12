@@ -75,14 +75,6 @@ var BELLS = {
     ]
 };
 
-var BELL_NAMES = {
-    "45": "45 минут",
-    "35": "35 минут",
-    "30": "30 минут",
-    "from5": "с 5-го урока"
-};
-
-var DAYS_SHORT = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
 var DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница"];
 
 function gid() {
@@ -91,41 +83,58 @@ function gid() {
     return id;
 }
 
-function gs(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } }
-function ss(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+function getMonday(d) {
+    var date = new Date(d);
+    var day = date.getDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    return date;
+}
 
-function getWeekKey() {
+function formatDate(d) {
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+
+function getWeekKey(offset) {
     var now = new Date();
-    var jan1 = new Date(now.getFullYear(), 0, 1);
-    var days = Math.floor((now - jan1) / 86400000);
-    var week = Math.ceil((days + jan1.getDay() + 1) / 7);
-    return now.getFullYear() + "-W" + week;
+    var monday = getMonday(now);
+    monday.setDate(monday.getDate() + (offset * 7));
+    return formatDate(monday);
 }
 
-function clearOldWeek() {
-    var wk = getWeekKey();
-    var saved = localStorage.getItem("week_key");
-    if (saved !== wk) {
-        localStorage.setItem("week_key", wk);
-        localStorage.removeItem("hw");
-        localStorage.removeItem("reps");
+function getWeekDates(offset) {
+    var now = new Date();
+    var monday = getMonday(now);
+    monday.setDate(monday.getDate() + (offset * 7));
+    var dates = [];
+    var fullDates = [];
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        dates.push(d.getDate());
+        fullDates.push(formatDate(d));
     }
+    return { dates: dates, fullDates: fullDates };
 }
 
-function isBanned() { return gs("banned", []).indexOf(gid()) !== -1; }
-
-function track() {
-    var id = gid();
-    var v = gs("visits", []);
-    var ex = null;
-    for (var i = 0; i < v.length; i++) { if (v[i].id === id) { ex = v[i]; break; } }
-    var info = { id: id, ua: navigator.userAgent, ts: Date.now(), cnt: ex ? ex.cnt + 1 : 1 };
-    if (ex) { for (var k in info) ex[k] = info[k]; } else { v.push(info); }
-    ss("visits", v);
+function getWeekLabel(offset) {
+    var now = new Date();
+    var monday = getMonday(now);
+    monday.setDate(monday.getDate() + (offset * 7));
+    var sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    var months = ["","янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+    if (monday.getMonth() === sunday.getMonth()) {
+        return monday.getDate() + "-" + sunday.getDate() + " " + months[monday.getMonth()];
+    }
+    return monday.getDate() + " " + months[monday.getMonth()] + " - " + sunday.getDate() + " " + months[sunday.getMonth()];
 }
 
-function getBells() {
-    var mode = gs("bell_mode", "45");
+function getBellsForDay(dayDow) {
+    var mode = "45";
+    if (bellModesCache && bellModesCache[String(dayDow)]) {
+        mode = bellModesCache[String(dayDow)];
+    }
     return BELLS[mode] || BELLS["45"];
 }
 
@@ -137,15 +146,27 @@ function getLessonName(day, n) {
     return "";
 }
 
-function getLessons(day) {
+function getLessons(day, hwData, repsData, weekOffset) {
     var lessons = SCHEDULE[day] || [];
-    var today = new Date().toISOString().slice(0,10);
-    var reps = gs("reps", {});
-    var repKey = String(day) + "_" + today;
-    var repsToday = reps[repKey] || [];
-    var hwAll = gs("hw", {});
-    var hwDay = hwAll[String(day)] || [];
-    var bells = getBells();
+    var wkData = getWeekDates(weekOffset);
+    var dayIdx = day >= 1 && day <= 5 ? day - 1 : -1;
+    var dateString = dayIdx >= 0 ? wkData.fullDates[dayIdx] : "";
+    var repKey = day + "_" + dateString;
+    var repsToday = (repsData && repsData[repKey]) || [];
+    var hwDay = (hwData && hwData[String(day)]) || [];
+    var bells = getBellsForDay(day);
+
+    var shortType = shortDaysCache[String(day)] || null;
+    var filteredLessons = [];
+    var skipFrom = -1;
+    if (shortType === "1less") skipFrom = lessons.length - 1;
+    else if (shortType === "last2") skipFrom = 1;
+    else if (shortType === "last3") skipFrom = 2;
+    for (var i = 0; i < lessons.length; i++) {
+        if (skipFrom >= 0 && i >= skipFrom && !lessons[i].lunch) continue;
+        filteredLessons.push(lessons[i]);
+    }
+    lessons = filteredLessons;
 
     var bellIdx = 0;
     var result = [];
@@ -155,10 +176,7 @@ function getLessons(day) {
         bellIdx++;
 
         if (lesson.lunch) {
-            result.push({
-                n: lesson.n, lunch: true, name: "Обед", room: "",
-                bell: bell, hw: null, origName: null, replaced: false
-            });
+            result.push({ n: lesson.n, lunch: true, name: "Обед", room: "", bell: bell, hw: null, origName: null, replaced: false });
             continue;
         }
 
@@ -185,10 +203,22 @@ function getLessons(day) {
     return result;
 }
 
-function getCurrentBell() {
-    var bells = getBells();
+function getEndMinutes(bells) {
+    if (!bells || !bells.length) return 0;
+    var last = bells[bells.length - 1];
+    var e = last[1].split(":");
+    return +e[0] * 60 + +e[1];
+}
+
+function getCurrentBell(weekOffset) {
+    if (weekOffset !== 0) return -1;
     var now = new Date();
+    var day = now.getDay();
+    if (day < 1 || day > 5) return -1;
+    var bells = getBellsForDay(day);
     var m = now.getHours() * 60 + now.getMinutes();
+    var endMins = getEndMinutes(bells);
+    if (m > endMins) return -2;
     for (var i = 0; i < bells.length; i++) {
         var s = bells[i][0].split(":");
         var e = bells[i][1].split(":");
@@ -197,40 +227,34 @@ function getCurrentBell() {
     return -1;
 }
 
-function getWeekDates() {
-    var now = new Date();
-    var dayOfWeek = now.getDay();
-    var monday = new Date(now);
-    var diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    monday.setDate(now.getDate() + diff);
-    var dates = [];
-    for (var i = 0; i < 7; i++) {
-        var d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        dates.push(d.getDate());
-    }
-    return dates;
-}
-
 var todayDow = new Date().getDay();
 var selectedDay = todayDow;
+var weekOffset = 0;
+var currentHW = {};
+var currentReps = {};
+var bellModesCache = {};
+var shortDaysCache = {};
 
 function render() {
-    var lessons = getLessons(selectedDay);
-    var curBell = getCurrentBell();
+    var lessons = getLessons(selectedDay, currentHW, currentReps, weekOffset);
+    var curBell = getCurrentBell(weekOffset);
     var now = new Date();
-    var bells = getBells();
+    var wkData = getWeekDates(weekOffset);
+    var bells = getBellsForDay(selectedDay);
+
+    var weekLabel = document.getElementById("week-label");
+    if (weekLabel) weekLabel.textContent = getWeekLabel(weekOffset);
 
     var sel = document.getElementById("day-selector");
     sel.innerHTML = "";
-    var dates = getWeekDates();
     var dayLabels = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
     for (var d = 1; d <= 7; d++) {
         var dayIdx = d <= 6 ? d : 0;
         (function(day, idx) {
             var btn = document.createElement("button");
-            btn.className = "day-pill" + (day === selectedDay ? " active" : "") + (day === todayDow ? " has-today" : "");
-            btn.innerHTML = '<span class="day-name">' + dayLabels[day] + '</span><span class="day-num">' + dates[idx] + '</span>';
+            var isToday = day === todayDow && weekOffset === 0;
+            btn.className = "day-pill" + (day === selectedDay ? " active" : "") + (isToday ? " has-today" : "");
+            btn.innerHTML = '<span class="day-name">' + dayLabels[day] + '</span><span class="day-num">' + wkData.dates[idx] + '</span>';
             btn.onclick = function() { selectedDay = day; render(); };
             sel.appendChild(btn);
         })(dayIdx, d - 1);
@@ -246,9 +270,10 @@ function render() {
     }
 
     var banner = document.getElementById("now-banner");
-    if (todayDow === selectedDay && curBell >= 0) {
+    if (todayDow === selectedDay && weekOffset === 0 && curBell >= 0) {
         var ci = 0;
         for (var k = 0; k < lessons.length; k++) {
+            if (lessons[k].lunch) { ci++; continue; }
             if (ci === curBell) {
                 var cl = lessons[k];
                 var end = bells[curBell][1];
@@ -259,6 +284,9 @@ function render() {
             }
             ci++;
         }
+    } else if (todayDow === selectedDay && weekOffset === 0 && curBell === -2) {
+        banner.innerHTML = '<div class="now-dot" style="background:var(--orange);animation:none"></div><div class="now-info"><h3>\u0423\u0440\u043e\u043a\u0438 \u0437\u0430\u043a\u043e\u043d\u0447\u0435\u043d\u044b</h3><p>' + DAYS_FULL[selectedDay] + '</p></div>';
+        banner.classList.remove("hidden");
     } else {
         var count = lessons.length;
         banner.innerHTML = '<div class="now-dot" style="background:var(--dim);animation:none"></div><div class="now-info"><h3>' + DAYS_FULL[selectedDay] + '</h3><p>' + count + ' \u043f\u0430\u0440</p></div>';
@@ -268,8 +296,23 @@ function render() {
     sched.innerHTML = "";
     for (var i = 0; i < lessons.length; i++) {
         var l = lessons[i];
-        var isActive = todayDow === selectedDay && i === curBell;
-        var past = todayDow === selectedDay && curBell >= 0 && i < curBell;
+
+        var isActive = false;
+        var past = false;
+
+        if (weekOffset === 0) {
+            var todayIsWd = todayDow >= 1 && todayDow <= 5;
+            var selIsWd = selectedDay >= 1 && selectedDay <= 5;
+
+            if (todayIsWd && selectedDay === todayDow) {
+                if (curBell >= 0 && i === curBell) isActive = true;
+                else if (curBell === -2) past = true;
+                else if (curBell >= 0 && i < curBell) past = true;
+            } else if (selIsWd && (!todayIsWd || selectedDay < todayDow)) {
+                past = true;
+            }
+        }
+
         var cls = isActive ? "active" : past ? "past" : "";
 
         var numHtml = l.lunch ? '\ud83c\udf5d' : l.n;
@@ -286,21 +329,58 @@ function render() {
         sched.innerHTML += '<div class="card ' + cls + '">' +
             '<div class="num">' + numHtml + '</div>' +
             '<div class="info">' + nameHtml + roomHtml + hwHtml + '</div>' +
-            '<div class="time"><div class="t">' + l.bell[0] + ' \u2013 ' + l.bell[1] + '</div><div class="d">45 \u043c\u0438\u043d</div></div>' +
+            '<div class="time"><div class="t">' + l.bell[0] + ' \u2013 ' + l.bell[1] + '</div></div>' +
             '</div>';
     }
 
-    document.getElementById("current-date").textContent = now.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    var dateIdx = selectedDay >= 1 && selectedDay <= 5 ? selectedDay - 1 : 0;
+    document.getElementById("current-date").textContent = wkData.fullDates[dateIdx];
+}
+
+function changeWeek(dir) {
+    weekOffset += dir;
+    if (weekOffset > 1) weekOffset = 1;
+    if (weekOffset < 0) weekOffset = 0;
+    loadHWForWeek();
+    render();
+}
+
+function loadHWForWeek() {
+    var path = "hw_" + getWeekKey(weekOffset);
+    FirebaseDB.onValue(path, function(data) {
+        currentHW = data || {};
+        render();
+    });
 }
 
 function init() {
-    clearOldWeek();
-    if (isBanned()) {
-        document.getElementById("ban-screen").classList.remove("hidden");
-        return;
-    }
-    track();
+    FirebaseDB.init();
     document.getElementById("app").classList.remove("hidden");
+
+    loadHWForWeek();
+
+    FirebaseDB.onValue("reps", function(data) {
+        currentReps = data || {};
+        render();
+    });
+
+    FirebaseDB.onValue("bell_modes", function(data) {
+        bellModesCache = data || {};
+        render();
+    });
+
+    FirebaseDB.onValue("short_days", function(data) {
+        shortDaysCache = data || {};
+        render();
+    });
+
+    FirebaseDB.onValue("banned", function(data) {
+        if (data && data.indexOf(gid()) !== -1) {
+            document.getElementById("ban-screen").classList.remove("hidden");
+            document.getElementById("app").classList.add("hidden");
+        }
+    });
+
     render();
     setInterval(render, 15000);
 }

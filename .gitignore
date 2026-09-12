@@ -1,0 +1,14 @@
+# Secret config (Firebase credentials)
+firebase-config.js
+
+# Local server
+run.py
+run.sh
+
+# Icons (replace with your own)
+icon-192.png
+icon-512.png
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="279">
+    <meta name="apple-mobile-web-app-title" content="Стикер топки книг">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <title>279</title>
+    <title>Стикер топки книг</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,8 +18,14 @@
 
     <div id="app" class="container hidden">
         <div class="header">
-            <h1><span>279</span> Группа</h1>
+            <h1><span>279</span> Стикер топки книг</h1>
             <div class="date" id="current-date"></div>
+        </div>
+
+        <div class="week-nav">
+            <button class="arrow-btn" onclick="changeWeek(-1)">&#8249;</button>
+            <span id="week-label" class="week-label"></span>
+            <button class="arrow-btn" onclick="changeWeek(1)">&#8250;</button>
         </div>
 
         <div class="days" id="day-selector"></div>
@@ -32,9 +37,24 @@
         <div class="footer"><a href="admin.html">админ</a></div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-db.js"></script>
     <script src="app.js"></script>
     <script>
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+    if('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+            reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'activated') {
+                        location.reload();
+                    }
+                });
+            });
+        }).catch(function(){});
+    }
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
     var lastTouchEnd = 0;
     document.addEventListener('touchend', function(e) {

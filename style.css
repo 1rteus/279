@@ -66,6 +66,44 @@ body {
     justify-content: center;
 }
 
+.week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.arrow-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: var(--surface);
+    color: var(--dim);
+    font-size: 1.3em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arrow-btn:active {
+    background: var(--accent);
+    color: #fff;
+    transform: scale(0.95);
+}
+
+.week-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--dim);
+    min-width: 120px;
+    text-align: center;
+}
+
 .day-pill {
     width: 48px;
     height: 48px;
@@ -176,6 +214,28 @@ body {
 }
 
 .card.past {
+    opacity: 0.25;
+    background: #08080c;
+}
+
+.card.past::before {
+    background: var(--dim);
+}
+
+.card.past .name {
+    text-decoration: line-through;
+    text-decoration-color: var(--dim);
+}
+
+.card.past .num {
+    background: #08080c;
+    color: #444;
+}
+
+.card.past .room,
+.card.past .time .t,
+.card.past .time .d,
+.card.past .hw-inline {
     opacity: 0.4;
 }
 
