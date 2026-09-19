@@ -385,10 +385,12 @@ function init() {
     });
 
     FirebaseDB.onValue("banned", function(data) {
-        if (data && data.indexOf(gid()) !== -1) {
-            document.getElementById("ban-screen").classList.remove("hidden");
-            document.getElementById("app").classList.add("hidden");
-        }
+        try {
+            if (data && Array.isArray(data) && data.indexOf(gid()) !== -1) {
+                document.getElementById("ban-screen").classList.remove("hidden");
+                document.getElementById("app").classList.add("hidden");
+            }
+        } catch(e) { console.warn('banned check error:', e); }
     });
 
     render();

@@ -69,6 +69,8 @@
         if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, false);
+    window.addEventListener('error', function(e) { console.error('Global error:', e.error); });
+    window.addEventListener('unhandledrejection', function(e) { console.error('Unhandled rejection:', e.reason); });
 
     function showUpdateBanner() {
         document.getElementById('update-banner').classList.remove('hidden');
