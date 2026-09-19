@@ -81,15 +81,20 @@
     }
 
     function applyUpdate() {
+        var done = 0;
+        function tryReload() {
+            if (++done >= 2) location.reload(true);
+        }
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(regs) {
-                regs.forEach(function(reg) { reg.unregister(); });
-            });
+                Promise.all(regs.map(function(reg) { return reg.unregister(); })).then(tryReload).catch(tryReload);
+            }).catch(tryReload);
+        } else {
+            tryReload();
         }
         caches.keys().then(function(names) {
-            names.forEach(function(name) { caches.delete(name); });
-        });
-        location.reload(true);
+            Promise.all(names.map(function(name) { return caches.delete(name); })).then(tryReload).catch(tryReload);
+        }).catch(tryReload);
     }
     </script>
 </body>
