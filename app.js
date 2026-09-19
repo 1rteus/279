@@ -292,8 +292,8 @@ function render() {
             if (curBell >= 0 && ci === curBell) isActive = true;
             else if (isAfterSchool) past = true;
             else if (lastEnded >= 0 && ci <= lastEnded) past = true;
-        } else if (weekOffset === 0 && selectedDay < todayDow && todayDow <= 5) {
-            past = true;
+        } else if (weekOffset === 0 && selectedDay >= 1 && selectedDay <= 5 && selectedDay !== todayDow) {
+            if (todayDow === 0 || todayDow === 6 || todayDow > selectedDay) past = true;
         } else if (weekOffset < 0) {
             past = true;
         }
