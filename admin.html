@@ -2,12 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="📚">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
+    <meta name="app-version" content="1.2.0">
     <title>📚 Админ</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -433,6 +434,54 @@
             }
         });
     }
+    </script>
+
+    <div id="update-banner" class="update-banner hidden">
+        <div class="update-content">
+            <span class="update-icon">🔄</span>
+            <span class="update-text">Доступна новая версия приложения</span>
+            <button class="update-btn" onclick="applyUpdate()">Обновить</button>
+            <button class="update-dismiss" onclick="dismissUpdate()">×</button>
+        </div>
+    </div>
+
+    <script>
+    var CURRENT_VERSION = document.querySelector('meta[name="app-version"]').content;
+
+    function checkForUpdates() {
+        fetch('admin.html?v=' + Date.now(), { cache: 'no-cache' })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var match = html.match(/meta name="app-version" content="([^"]+)"/);
+                if (match && match[1] !== CURRENT_VERSION) {
+                    showUpdateBanner();
+                }
+            })
+            .catch(function() {});
+    }
+
+    function showUpdateBanner() {
+        document.getElementById('update-banner').classList.remove('hidden');
+    }
+
+    function dismissUpdate() {
+        document.getElementById('update-banner').classList.add('hidden');
+    }
+
+    function applyUpdate() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(reg) { reg.unregister(); });
+            });
+        }
+        caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+        });
+        location.reload(true);
+    }
+
+    setInterval(checkForUpdates, 60000);
+    checkForUpdates();
     </script>
 </body>
 </html>

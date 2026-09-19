@@ -10,6 +10,7 @@
     <link rel="manifest" href="manifest.json">
     <title>📚</title>
     <link rel="stylesheet" href="style.css">
+    <meta name="app-version" content="1.2.0">
 </head>
 <body>
     <div id="ban-screen" class="ban hidden">
@@ -37,6 +38,15 @@
         <div class="footer"><a href="admin.html">админ</a></div>
     </div>
 
+    <div id="update-banner" class="update-banner hidden">
+        <div class="update-content">
+            <span class="update-icon">🔄</span>
+            <span class="update-text">Доступна новая версия приложения</span>
+            <button class="update-btn" onclick="applyUpdate()">Обновить</button>
+            <button class="update-dismiss" onclick="dismissUpdate()">×</button>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
@@ -62,6 +72,43 @@
         if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, false);
+
+    var CURRENT_VERSION = document.querySelector('meta[name="app-version"]').content;
+
+    function checkForUpdates() {
+        fetch('index.html?v=' + Date.now(), { cache: 'no-cache' })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var match = html.match(/meta name="app-version" content="([^"]+)"/);
+                if (match && match[1] !== CURRENT_VERSION) {
+                    showUpdateBanner();
+                }
+            })
+            .catch(function() {});
+    }
+
+    function showUpdateBanner() {
+        document.getElementById('update-banner').classList.remove('hidden');
+    }
+
+    function dismissUpdate() {
+        document.getElementById('update-banner').classList.add('hidden');
+    }
+
+    function applyUpdate() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(reg) { reg.unregister(); });
+            });
+        }
+        caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+        });
+        location.reload(true);
+    }
+
+    setInterval(checkForUpdates, 60000);
+    checkForUpdates();
     </script>
 </body>
 </html>

@@ -418,3 +418,87 @@ body {
 .card:nth-child(7) { animation-delay: 0.14s; }
 .card:nth-child(8) { animation-delay: 0.16s; }
 .card:nth-child(9) { animation-delay: 0.18s; }
+
+/* Update banner */
+.update-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--accent);
+    padding: 12px 16px;
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.update-content {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.update-icon { font-size: 1.3em; }
+
+.update-text {
+    flex: 1;
+    min-width: 200px;
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.update-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.8em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.update-btn:active { transform: scale(0.97); }
+
+.update-dismiss {
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+}
+
+.update-dismiss:active { color: var(--text); }
+
+/* Landscape support */
+@media (orientation: landscape) and (max-height: 500px) {
+    .login-box { padding: 16px; max-width: 90vw; }
+    .login-box h2 { font-size: 1.1em; margin-bottom: 12px; }
+    .field { margin-bottom: 8px; }
+    .field label { font-size: 0.7em; margin-bottom: 4px; }
+    .field input, .field select, .field textarea { padding: 8px 10px; font-size: 0.85em; }
+    .field textarea { min-height: 50px; }
+    .btn { padding: 10px 16px; font-size: 0.8em; }
+    .admin-head { padding: 12px 0 2px; }
+    .admin-head h1 { font-size: 1.1em; }
+    .tabs { gap: 4px; margin: 8px 0; }
+    .tab { padding: 8px 10px; font-size: 0.72em; }
+    .section-label { margin: 10px 0 6px; font-size: 0.65em; }
+    .item { padding: 10px 12px; margin-bottom: 4px; }
+    .item-title { font-size: 0.8em; }
+    .item-sub { font-size: 0.72em; }
+    .btn-sm { padding: 6px 10px; font-size: 0.7em; }
+    .week-nav { margin-bottom: 8px; gap: 8px; }
+}
