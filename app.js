@@ -238,6 +238,7 @@ var shortDaysCache = {};
 function render() {
     var lessons = getLessons(selectedDay, currentHW, currentReps, weekOffset);
     var curBell = getCurrentBell(weekOffset);
+    var lastEnded = getLastEndedLesson(weekOffset);
     var now = new Date();
     var wkData = getWeekDates(weekOffset);
     var bells = getBellsForDay(selectedDay);
@@ -270,7 +271,10 @@ function render() {
     }
 
     var banner = document.getElementById("now-banner");
-    if (todayDow === selectedDay && weekOffset === 0 && curBell >= 0) {
+    var isToday = todayDow === selectedDay && weekOffset === 0;
+    var isAfterSchool = isToday && curBell === -2;
+
+    if (isToday && curBell >= 0) {
         var ci = 0;
         for (var k = 0; k < lessons.length; k++) {
             if (lessons[k].lunch) { ci++; continue; }
@@ -284,12 +288,12 @@ function render() {
             }
             ci++;
         }
-    } else if (todayDow === selectedDay && weekOffset === 0 && curBell === -2) {
+    } else if (isAfterSchool) {
         banner.innerHTML = '<div class="now-dot" style="background:var(--orange);animation:none"></div><div class="now-info"><h3>\u0423\u0440\u043e\u043a\u0438 \u0437\u0430\u043a\u043e\u043d\u0447\u0435\u043d\u044b</h3><p>' + DAYS_FULL[selectedDay] + '</p></div>';
         banner.classList.remove("hidden");
     } else {
         var count = lessons.length;
-        banner.innerHTML = '<div class="now-dot" style="background:var(--dim);animation:none"></div><div class="now-info"><h3>' + DAYS_FULL[selectedDay] + '</h3><p>' + count + ' \u043f\u0430\u0440</p></div>';
+        banner.innerHTML = '<div class="now-dot" style="background:var(--dim);animation:none"></div><div class="now-info"><h3>' + DAYS_FULL[selectedDay] + '</h3><p>' + count + ' \u0443\u0440\u043e\u043a\u043e\u0432</p></div>';
         banner.classList.remove("hidden");
     }
 
@@ -305,9 +309,15 @@ function render() {
             var selIsWd = selectedDay >= 1 && selectedDay <= 5;
 
             if (todayIsWd && selectedDay === todayDow) {
+                var ci = 0;
+                for (var k = 0; k < lessons.length; k++) {
+                    if (lessons[k].lunch) { ci++; continue; }
+                    if (ci === i) break;
+                    ci++;
+                }
                 if (curBell >= 0 && i === curBell) isActive = true;
-                else if (curBell === -2) past = true;
-                else if (curBell >= 0 && i < curBell) past = true;
+                else if (isAfterSchool) past = true;
+                else if (lastEnded >= 0 && ci <= lastEnded) past = true;
             } else if (selIsWd && (!todayIsWd || selectedDay < todayDow)) {
                 past = true;
             }
@@ -386,3 +396,4 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+                                                                                                                                                                                                                                                                                                                                                                                                                                   
