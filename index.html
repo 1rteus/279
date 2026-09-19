@@ -35,7 +35,7 @@
 
         <div id="schedule"></div>
 
-        <div class="footer"><a href="admin.html">админ</a></div>
+        <div class="footer"><a href="admin.html">админ</a> | <button class="debug-btn" onclick="forceClearAll()">🔧 Сбросить всё</button></div>
     </div>
 
     <div id="update-banner" class="update-banner hidden">
@@ -95,6 +95,20 @@
         caches.keys().then(function(names) {
             Promise.all(names.map(function(name) { return caches.delete(name); })).then(tryReload).catch(tryReload);
         }).catch(tryReload);
+    }
+
+    function forceClearAll() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(reg) { reg.unregister(); });
+            });
+        }
+        caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+        });
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload(true);
     }
     </script>
 </body>

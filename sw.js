@@ -1,17 +1,9 @@
-const CACHE_NAME = "schedule-v4";
-const STATIC_ASSETS = [
-    "index.html",
-    "admin.html",
-    "style.css",
-    "app.js",
-    "firebase-config.js",
-    "firebase-db.js",
-    "manifest.json"
-];
+const CACHE_NAME = "schedule-v5";
 
 self.addEventListener("install", e => {
     e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+        .then(() => caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)))
     );
     self.skipWaiting();
 });
@@ -48,3 +40,13 @@ self.addEventListener("fetch", e => {
         }));
     }
 });
+
+const STATIC_ASSETS = [
+    "index.html",
+    "admin.html",
+    "style.css",
+    "app.js",
+    "firebase-config.js",
+    "firebase-db.js",
+    "manifest.json"
+];

@@ -354,6 +354,18 @@ body {
 
 .footer a:hover { opacity: 1; }
 
+.debug-btn {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.65em;
+    cursor: pointer;
+}
+
+.debug-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 /* Ban */
 .ban {
     display: flex;
