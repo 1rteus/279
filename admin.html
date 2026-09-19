@@ -52,6 +52,11 @@
         .bell-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
         .bell-day{font-size:0.85em;font-weight:600;min-width:30px}
         .bell-row select{flex:1}
+        .bell-grid{display:flex;gap:8px;flex-wrap:wrap}
+        .bell-cell{flex:1;min-width:80px;background:var(--surface);border-radius:12px;padding:12px;text-align:center}
+        .bell-cell .bell-day{display:block;font-size:0.8em;font-weight:700;color:var(--accent);margin-bottom:8px}
+        .bell-cell select{width:100%;padding:8px;border:1px solid var(--surface2);border-radius:8px;background:var(--surface2);color:var(--text);font-size:0.78em;text-align:center}
+        .bell-cell select:focus{border-color:var(--accent)}
     </style>
 </head>
 <body>
@@ -76,9 +81,9 @@
 
         <div id="p-hw" class="tab-panel active">
             <div class="week-nav">
-                <button class="btn btn-sm" onclick="changeHWWeek(-1)">&#8249; Неделя</button>
+                <button class="btn btn-sm" onclick="changeHWWeek(-1)">Назад</button>
                 <span id="hw-week-label" style="font-size:0.8em;font-weight:600;color:var(--dim)">Эта неделя</span>
-                <button class="btn btn-sm" onclick="changeHWWeek(1)">Неделя &#8250;</button>
+                <button class="btn btn-sm" onclick="changeHWWeek(1)">Следующая</button>
             </div>
             <div class="field"><label>День</label>
                 <select id="hw-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
@@ -115,9 +120,9 @@
         </div>
 
         <div id="p-bell" class="tab-panel">
-            <div class="section-label">Расписание звонков по дням недели</div>
+            <div class="section-label">Выбери тип звонков для каждого дня</div>
             <div id="bell-grid"></div>
-            <div class="section-label">Текущее расписание</div>
+            <div class="section-label">Расписание звонков</div>
             <div id="bell-table"></div>
         </div>
 
@@ -463,7 +468,7 @@
         var grid = document.getElementById("bell-grid");
         var html = "";
         for (var d = 1; d <= 5; d++) {
-            html += '<div class="bell-row"><span class="bell-day">' + DN[d] + '</span><select id="bell-day-' + d + '" onchange="setBellForDay(' + d + ')">';
+            html += '<div class="bell-cell"><span class="bell-day">' + DN[d] + '</span><select id="bell-day-' + d + '" onchange="setBellForDay(' + d + ')">';
             for (var i = 0; i < BELL_OPTIONS.length; i++) {
                 html += '<option value="' + BELL_OPTIONS[i].val + '">' + BELL_OPTIONS[i].label + '</option>';
             }
@@ -497,7 +502,7 @@
 
     function showBellTable(mode) {
         var bellData = BELL_DATA[mode] || BELL_DATA["45"];
-        var html = "";
+        var html = '<div class="item"><div class="item-top" style="font-weight:700;font-size:0.8em;color:var(--accent);margin-bottom:4px">' + bellData.name + '</div></div>';
         for (var i = 0; i < bellData.bells.length; i++) {
             html += '<div class="item"><div class="item-top"><span class="item-title">' + (i+1) + ' урок</span><span class="item-title">' + bellData.bells[i][0] + ' \u2013 ' + bellData.bells[i][1] + '</span></div></div>';
         }
