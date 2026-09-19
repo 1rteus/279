@@ -8,7 +8,6 @@
     <meta name="apple-mobile-web-app-title" content="📚">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
-    <meta name="app-version" content="1.2.0">
     <title>📚 Админ</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -514,18 +513,16 @@
     </div>
 
     <script>
-    var CURRENT_VERSION = document.querySelector('meta[name="app-version"]').content;
-
-    function checkForUpdates() {
-        fetch('admin.html?v=' + Date.now(), { cache: 'no-cache' })
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                var match = html.match(/meta name="app-version" content="([^"]+)"/);
-                if (match && match[1] !== CURRENT_VERSION) {
-                    showUpdateBanner();
-                }
-            })
-            .catch(function() {});
+    if('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+            var refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (refreshing) return;
+                refreshing = true;
+                showUpdateBanner();
+            });
+            setInterval(function() { reg.update(); }, 60000);
+        }).catch(function(){});
     }
 
     function showUpdateBanner() {
@@ -547,9 +544,6 @@
         });
         location.reload(true);
     }
-
-    setInterval(checkForUpdates, 60000);
-    checkForUpdates();
     </script>
 </body>
 </html>

@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="📚">
-    <meta name="theme-color" content="#0a0a0f">
+<meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
     <title>📚</title>
     <link rel="stylesheet" href="style.css">
@@ -55,14 +55,13 @@
     <script>
     if('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(function(reg) {
-            reg.addEventListener('updatefound', function() {
-                var newWorker = reg.installing;
-                newWorker.addEventListener('statechange', function() {
-                    if (newWorker.state === 'activated') {
-                        location.reload();
-                    }
-                });
+            var refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (refreshing) return;
+                refreshing = true;
+                showUpdateBanner();
             });
+            setInterval(function() { reg.update(); }, 60000);
         }).catch(function(){});
     }
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
@@ -72,20 +71,6 @@
         if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, false);
-
-    var CURRENT_VERSION = document.querySelector('meta[name="app-version"]').content;
-
-    function checkForUpdates() {
-        fetch('index.html?v=' + Date.now(), { cache: 'no-cache' })
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                var match = html.match(/meta name="app-version" content="([^"]+)"/);
-                if (match && match[1] !== CURRENT_VERSION) {
-                    showUpdateBanner();
-                }
-            })
-            .catch(function() {});
-    }
 
     function showUpdateBanner() {
         document.getElementById('update-banner').classList.remove('hidden');
@@ -106,9 +91,6 @@
         });
         location.reload(true);
     }
-
-    setInterval(checkForUpdates, 60000);
-    checkForUpdates();
     </script>
 </body>
 </html>
