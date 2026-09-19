@@ -53,35 +53,13 @@ var SCHEDULE = {
 };
 
 var BELLS = {
-    "45": [
-        ["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],
-        ["11:15","12:00"],["12:10","12:55"],["13:15","14:00"],
-        ["14:10","14:55"],["15:05","15:50"],["16:00","16:45"]
-    ],
-    "35": [
-        ["08:30","09:05"],["09:10","09:45"],["09:50","10:25"],
-        ["10:30","11:05"],["11:10","11:45"],["11:50","12:25"],
-        ["12:30","13:05"],["13:10","13:45"],["13:50","14:25"]
-    ],
-    "30": [
-        ["08:30","09:00"],["09:05","09:35"],["09:40","10:10"],
-        ["10:15","10:45"],["10:50","11:20"],["11:25","11:55"],
-        ["12:00","12:30"],["12:35","13:05"],["13:10","13:40"]
-    ],
-    "from5": [
-        ["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],
-        ["11:15","12:00"],["12:05","12:35"],["12:40","13:10"],
-        ["13:15","13:45"],["13:50","14:20"],["14:25","14:55"]
-    ]
+    "45": [["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:10","12:55"],["13:15","14:00"],["14:10","14:55"],["15:05","15:50"],["16:00","16:45"]],
+    "35": [["08:30","09:05"],["09:10","09:45"],["09:50","10:25"],["10:30","11:05"],["11:10","11:45"],["11:50","12:25"],["12:30","13:05"],["13:10","13:45"],["13:50","14:25"]],
+    "30": [["08:30","09:00"],["09:05","09:35"],["09:40","10:10"],["10:15","10:45"],["10:50","11:20"],["11:25","11:55"],["12:00","12:30"],["12:35","13:05"],["13:10","13:40"]],
+    "from5": [["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:05","12:35"],["12:40","13:10"],["13:15","13:45"],["13:50","14:20"],["14:25","14:55"]]
 };
 
 var DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница"];
-
-function gid() {
-    var id = localStorage.getItem("did");
-    if (!id) { id = "d" + Math.random().toString(36).slice(2,14); localStorage.setItem("did", id); }
-    return id;
-}
 
 function getMonday(d) {
     var date = new Date(d);
@@ -118,6 +96,8 @@ function getWeekDates(offset) {
 }
 
 function getWeekLabel(offset) {
+    if (offset === 0) return "Эта неделя";
+    if (offset === 1) return "Следующая";
     var now = new Date();
     var monday = getMonday(now);
     monday.setDate(monday.getDate() + (offset * 7));
@@ -136,14 +116,6 @@ function getBellsForDay(dayDow) {
         mode = bellModesCache[String(dayDow)];
     }
     return BELLS[mode] || BELLS["45"];
-}
-
-function getLessonName(day, n) {
-    var list = SCHEDULE[day] || [];
-    for (var i = 0; i < list.length; i++) {
-        if (list[i].n === n) return list[i].name;
-    }
-    return "";
 }
 
 function getLessons(day, hwData, repsData, weekOffset) {
@@ -176,7 +148,7 @@ function getLessons(day, hwData, repsData, weekOffset) {
         bellIdx++;
 
         if (lesson.lunch) {
-            result.push({ n: lesson.n, lunch: true, name: "Обед", room: "", bell: bell, hw: null, origName: null, replaced: false });
+            result.push({ n: lesson.n, lunch: true, name: "Обед", room: "", bell: bell });
             continue;
         }
 
@@ -203,13 +175,6 @@ function getLessons(day, hwData, repsData, weekOffset) {
     return result;
 }
 
-function getEndMinutes(bells) {
-    if (!bells || !bells.length) return 0;
-    var last = bells[bells.length - 1];
-    var e = last[1].split(":");
-    return +e[0] * 60 + +e[1];
-}
-
 function getCurrentBell(weekOffset) {
     if (weekOffset !== 0) return -1;
     var now = new Date();
@@ -217,14 +182,30 @@ function getCurrentBell(weekOffset) {
     if (day < 1 || day > 5) return -1;
     var bells = getBellsForDay(day);
     var m = now.getHours() * 60 + now.getMinutes();
-    var endMins = getEndMinutes(bells);
+    var lastEnd = bells[bells.length - 1];
+    var endMins = parseInt(lastEnd[1]) * 60 + parseInt(lastEnd[1].split(":")[1]);
     if (m > endMins) return -2;
     for (var i = 0; i < bells.length; i++) {
         var s = bells[i][0].split(":");
         var e = bells[i][1].split(":");
-        if (m >= +s[0]*60 + +s[1] && m <= +e[0]*60 + +e[1]) return i;
+        if (m >= parseInt(s[0])*60 + parseInt(s[1]) && m <= parseInt(e[0])*60 + parseInt(e[1])) return i;
     }
     return -1;
+}
+
+function getLastEndedLesson(weekOffset) {
+    if (weekOffset !== 0) return -1;
+    var now = new Date();
+    var day = now.getDay();
+    if (day < 1 || day > 5) return -1;
+    var bells = getBellsForDay(day);
+    var m = now.getHours() * 60 + now.getMinutes();
+    var ended = -1;
+    for (var i = 0; i < bells.length; i++) {
+        var e = bells[i][1].split(":");
+        if (m > parseInt(e[0])*60 + parseInt(e[1])) ended = i;
+    }
+    return ended;
 }
 
 var todayDow = new Date().getDay();
@@ -236,6 +217,8 @@ var bellModesCache = {};
 var shortDaysCache = {};
 
 function render() {
+    if (selectedDay < 0 || selectedDay > 6) selectedDay = todayDow;
+
     var lessons = getLessons(selectedDay, currentHW, currentReps, weekOffset);
     var curBell = getCurrentBell(weekOffset);
     var lastEnded = getLastEndedLesson(weekOffset);
@@ -251,14 +234,12 @@ function render() {
     var dayLabels = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
     for (var d = 1; d <= 7; d++) {
         var dayIdx = d <= 6 ? d : 0;
-        (function(day, idx) {
-            var btn = document.createElement("button");
-            var isToday = day === todayDow && weekOffset === 0;
-            btn.className = "day-pill" + (day === selectedDay ? " active" : "") + (isToday ? " has-today" : "");
-            btn.innerHTML = '<span class="day-name">' + dayLabels[day] + '</span><span class="day-num">' + wkData.dates[idx] + '</span>';
-            btn.onclick = function() { selectedDay = day; render(); };
-            sel.appendChild(btn);
-        })(dayIdx, d - 1);
+        var btn = document.createElement("button");
+        var isToday = dayIdx === todayDow && weekOffset === 0;
+        btn.className = "day-pill" + (dayIdx === selectedDay ? " active" : "") + (isToday ? " has-today" : "");
+        btn.innerHTML = '<span class="day-name">' + dayLabels[dayIdx] + '</span><span class="day-num">' + wkData.dates[d-1] + '</span>';
+        (function(day) { btn.onclick = function() { selectedDay = day; render(); }; })(dayIdx);
+        sel.appendChild(btn);
     }
 
     var sched = document.getElementById("schedule");
@@ -277,12 +258,11 @@ function render() {
     if (isToday && curBell >= 0) {
         var ci = 0;
         for (var k = 0; k < lessons.length; k++) {
-            if (lessons[k].lunch) { ci++; continue; }
+            if (lessons[k].lunch) continue;
             if (ci === curBell) {
                 var cl = lessons[k];
                 var end = bells[curBell][1];
-                var sub = cl.lunch ? "\u0435\u0434\u0438\u043c \u0434\u043e " + end : "\u043a\u0430\u0431. " + cl.room + " \u00b7 \u0434\u043e " + end;
-                banner.innerHTML = '<div class="now-dot"></div><div class="now-info"><h3>' + cl.name + '</h3><p>' + sub + '</p></div>';
+                banner.innerHTML = '<div class="now-dot"></div><div class="now-info"><h3>' + cl.name + '</h3><p>\u043a\u0430\u0431. ' + cl.room + ' \u00b7 \u0434\u043e ' + end + '</p></div>';
                 banner.classList.remove("hidden");
                 break;
             }
@@ -292,51 +272,41 @@ function render() {
         banner.innerHTML = '<div class="now-dot" style="background:var(--orange);animation:none"></div><div class="now-info"><h3>\u0423\u0440\u043e\u043a\u0438 \u0437\u0430\u043a\u043e\u043d\u0447\u0435\u043d\u044b</h3><p>' + DAYS_FULL[selectedDay] + '</p></div>';
         banner.classList.remove("hidden");
     } else {
-        var count = lessons.length;
-        banner.innerHTML = '<div class="now-dot" style="background:var(--dim);animation:none"></div><div class="now-info"><h3>' + DAYS_FULL[selectedDay] + '</h3><p>' + count + ' \u0443\u0440\u043e\u043a\u043e\u0432</p></div>';
+        banner.innerHTML = '<div class="now-dot" style="background:var(--dim);animation:none"></div><div class="now-info"><h3>' + DAYS_FULL[selectedDay] + '</h3><p>' + lessons.length + ' \u0443\u0440\u043e\u043a\u043e\u0432</p></div>';
         banner.classList.remove("hidden");
     }
 
     sched.innerHTML = "";
     for (var i = 0; i < lessons.length; i++) {
         var l = lessons[i];
-
         var isActive = false;
         var past = false;
 
-        if (weekOffset === 0) {
-            var todayIsWd = todayDow >= 1 && todayDow <= 5;
-            var selIsWd = selectedDay >= 1 && selectedDay <= 5;
-
-            if (todayIsWd && selectedDay === todayDow) {
-                var ci = 0;
-                for (var k = 0; k < lessons.length; k++) {
-                    if (lessons[k].lunch) { ci++; continue; }
-                    if (ci === i) break;
-                    ci++;
-                }
-                if (curBell >= 0 && i === curBell) isActive = true;
-                else if (isAfterSchool) past = true;
-                else if (lastEnded >= 0 && ci <= lastEnded) past = true;
-            } else if (selIsWd && (!todayIsWd || selectedDay < todayDow)) {
-                past = true;
+        if (weekOffset === 0 && isToday) {
+            var ci = 0;
+            for (var k = 0; k < lessons.length; k++) {
+                if (lessons[k].lunch) { ci++; continue; }
+                if (ci === i) break;
+                ci++;
             }
+            if (curBell >= 0 && ci === curBell) isActive = true;
+            else if (isAfterSchool) past = true;
+            else if (lastEnded >= 0 && ci <= lastEnded) past = true;
+        } else if (weekOffset === 0 && selectedDay < todayDow && todayDow <= 5) {
+            past = true;
+        } else if (weekOffset < 0) {
+            past = true;
         }
 
-        var cls = isActive ? "active" : past ? "past" : "";
-
+        var cls = isActive ? " active" : past ? " past" : "";
         var numHtml = l.lunch ? '\ud83c\udf5d' : l.n;
         var nameHtml = '<div class="name">' + l.name + '</div>';
         if (l.origName) nameHtml = '<div class="name old">' + l.origName + '</div><div class="replace">\u2192 ' + l.name + '</div>';
-
         var hwHtml = '';
-        if (l.hw) {
-            hwHtml = '<div class="hw-inline">' + l.hw.replace(/\n/g, '<br>') + '</div>';
-        }
-
+        if (l.hw) hwHtml = '<div class="hw-inline">' + l.hw.replace(/\n/g, '<br>') + '</div>';
         var roomHtml = l.lunch ? '' : '<div class="room">\u043a\u0430\u0431. ' + l.room + '</div>';
 
-        sched.innerHTML += '<div class="card ' + cls + '">' +
+        sched.innerHTML += '<div class="card' + cls + '">' +
             '<div class="num">' + numHtml + '</div>' +
             '<div class="info">' + nameHtml + roomHtml + hwHtml + '</div>' +
             '<div class="time"><div class="t">' + l.bell[0] + ' \u2013 ' + l.bell[1] + '</div></div>' +
@@ -384,18 +354,8 @@ function init() {
         render();
     });
 
-    FirebaseDB.onValue("banned", function(data) {
-        try {
-            if (data && Array.isArray(data) && data.indexOf(gid()) !== -1) {
-                document.getElementById("ban-screen").classList.remove("hidden");
-                document.getElementById("app").classList.add("hidden");
-            }
-        } catch(e) { console.warn('banned check error:', e); }
-    });
-
     render();
     setInterval(render, 15000);
 }
 
 document.addEventListener("DOMContentLoaded", init);
-                                                                                                                                                                                                                                                                                                                                                                                                                                   

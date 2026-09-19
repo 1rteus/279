@@ -49,8 +49,9 @@
         .admin-head h1 span{color:var(--accent)}
         .admin-head p{color:var(--dim);font-size:0.8em;margin-top:2px}
         .section-label{font-size:0.72em;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px}
-        .week-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
-        .week-nav .btn{background:var(--surface2);color:var(--dim)}
+        .bell-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+        .bell-day{font-size:0.85em;font-weight:600;min-width:30px}
+        .bell-row select{flex:1}
     </style>
 </head>
 <body>
@@ -115,7 +116,7 @@
 
         <div id="p-bell" class="tab-panel">
             <div class="section-label">Расписание звонков по дням недели</div>
-            <div class="bell-grid" id="bell-grid"></div>
+            <div id="bell-grid"></div>
             <div class="section-label">Текущее расписание</div>
             <div id="bell-table"></div>
         </div>
@@ -180,6 +181,7 @@
 
     function doLogin() {
         var pw = document.getElementById("pw").value;
+        if (!pw) return;
         FirebaseDB.get("config_admin_pw", function(data) {
             var correctPw = (data && data.value) ? data.value : PW_FALLBACK;
             if (pw === correctPw) {
@@ -500,54 +502,6 @@
             html += '<div class="item"><div class="item-top"><span class="item-title">' + (i+1) + ' урок</span><span class="item-title">' + bellData.bells[i][0] + ' \u2013 ' + bellData.bells[i][1] + '</span></div></div>';
         }
         document.getElementById("bell-table").innerHTML = html;
-    }
-    </script>
-
-    <div id="update-banner" class="update-banner hidden">
-        <div class="update-content">
-            <span class="update-icon">🔄</span>
-            <span class="update-text">Доступна новая версия приложения</span>
-            <button class="update-btn" onclick="applyUpdate()">Обновить</button>
-            <button class="update-dismiss" onclick="dismissUpdate()">×</button>
-        </div>
-    </div>
-
-    <script>
-    if('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(function(reg) {
-            var refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', function() {
-                if (refreshing) return;
-                refreshing = true;
-                showUpdateBanner();
-            });
-            setInterval(function() { reg.update(); }, 60000);
-        }).catch(function(){});
-    }
-
-    function showUpdateBanner() {
-        document.getElementById('update-banner').classList.remove('hidden');
-    }
-
-    function dismissUpdate() {
-        document.getElementById('update-banner').classList.add('hidden');
-    }
-
-    function applyUpdate() {
-        var done = 0;
-        function tryReload() {
-            if (++done >= 2) location.reload(true);
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                Promise.all(regs.map(function(reg) { return reg.unregister(); })).then(tryReload).catch(tryReload);
-            }).catch(tryReload);
-        } else {
-            tryReload();
-        }
-        caches.keys().then(function(names) {
-            Promise.all(names.map(function(name) { return caches.delete(name); })).then(tryReload).catch(tryReload);
-        }).catch(tryReload);
     }
     </script>
 </body>

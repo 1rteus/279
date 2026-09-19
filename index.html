@@ -6,16 +6,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="📚">
-<meta name="theme-color" content="#0a0a0f">
+    <meta name="theme-color" content="#0a0a0f">
     <link rel="manifest" href="manifest.json">
     <title>📚</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="ban-screen" class="ban hidden">
-        <div><h2>Доступ запрещён</h2><p>Ваше устройство заблокировано.</p></div>
-    </div>
-
-    <div id="app" class="container hidden">
+    <div id="app" class="container">
         <div class="header">
             <h1>📚</h1>
             <div class="date" id="current-date"></div>
@@ -29,20 +26,11 @@
 
         <div class="days" id="day-selector"></div>
 
-        <div class="now-banner" id="now-banner"></div>
+        <div class="now-banner hidden" id="now-banner"></div>
 
         <div id="schedule"></div>
 
-        <div class="footer"><a href="admin.html">админ</a> | <button class="debug-btn" onclick="forceClearAll()">🔧 Сбросить всё</button></div>
-    </div>
-
-    <div id="update-banner" class="update-banner hidden">
-        <div class="update-content">
-            <span class="update-icon">🔄</span>
-            <span class="update-text">Доступна новая версия приложения</span>
-            <button class="update-btn" onclick="applyUpdate()">Обновить</button>
-            <button class="update-dismiss" onclick="dismissUpdate()">×</button>
-        </div>
+        <div class="footer"><a href="admin.html">админ</a></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -51,17 +39,6 @@
     <script src="firebase-db.js"></script>
     <script src="app.js"></script>
     <script>
-    if('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(function(reg) {
-            var refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', function() {
-                if (refreshing) return;
-                refreshing = true;
-                showUpdateBanner();
-            });
-            setInterval(function() { reg.update(); }, 60000);
-        }).catch(function(){});
-    }
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
     var lastTouchEnd = 0;
     document.addEventListener('touchend', function(e) {
@@ -69,47 +46,6 @@
         if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, false);
-    window.addEventListener('error', function(e) { console.error('Global error:', e.error); });
-    window.addEventListener('unhandledrejection', function(e) { console.error('Unhandled rejection:', e.reason); });
-
-    function showUpdateBanner() {
-        document.getElementById('update-banner').classList.remove('hidden');
-    }
-
-    function dismissUpdate() {
-        document.getElementById('update-banner').classList.add('hidden');
-    }
-
-    function applyUpdate() {
-        var done = 0;
-        function tryReload() {
-            if (++done >= 2) location.reload(true);
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                Promise.all(regs.map(function(reg) { return reg.unregister(); })).then(tryReload).catch(tryReload);
-            }).catch(tryReload);
-        } else {
-            tryReload();
-        }
-        caches.keys().then(function(names) {
-            Promise.all(names.map(function(name) { return caches.delete(name); })).then(tryReload).catch(tryReload);
-        }).catch(tryReload);
-    }
-
-    function forceClearAll() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                regs.forEach(function(reg) { reg.unregister(); });
-            });
-        }
-        caches.keys().then(function(names) {
-            names.forEach(function(name) { caches.delete(name); });
-        });
-        localStorage.clear();
-        sessionStorage.clear();
-        location.reload(true);
-    }
     </script>
 </body>
 </html>
