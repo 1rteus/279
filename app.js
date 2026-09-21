@@ -255,19 +255,15 @@ function render() {
     var isToday = todayDow === selectedDay && weekOffset === 0;
     var isAfterSchool = isToday && curBell === -2;
 
-    if (isToday && curBell >= 0) {
-        var ci = 0;
-        for (var k = 0; k < lessons.length; k++) {
-            if (lessons[k].lunch) continue;
-            if (ci === curBell) {
-                var cl = lessons[k];
-                var end = bells[curBell][1];
-                banner.innerHTML = '<div class="now-dot"></div><div class="now-info"><h3>' + cl.name + '</h3><p>\u043a\u0430\u0431. ' + cl.room + ' \u00b7 \u0434\u043e ' + end + '</p></div>';
-                banner.classList.remove("hidden");
-                break;
-            }
-            ci++;
+    if (isToday && curBell >= 0 && curBell < lessons.length) {
+        var cl = lessons[curBell];
+        var end = bells[curBell][1];
+        if (cl.lunch) {
+            banner.innerHTML = '<div class="now-dot" style="background:var(--orange)"></div><div class="now-info"><h3>\ud83c\udf5d \u041e\u0431\u0435\u0434</h3><p>' + end + '</p></div>';
+        } else {
+            banner.innerHTML = '<div class="now-dot"></div><div class="now-info"><h3>' + cl.name + '</h3><p>\u043a\u0430\u0431. ' + cl.room + ' \u00b7 \u0434\u043e ' + end + '</p></div>';
         }
+        banner.classList.remove("hidden");
     } else if (isAfterSchool) {
         banner.innerHTML = '<div class="now-dot" style="background:var(--orange);animation:none"></div><div class="now-info"><h3>\u0423\u0440\u043e\u043a\u0438 \u0437\u0430\u043a\u043e\u043d\u0447\u0435\u043d\u044b</h3><p>' + DAYS_FULL[selectedDay] + '</p></div>';
         banner.classList.remove("hidden");
@@ -283,15 +279,9 @@ function render() {
         var past = false;
 
         if (weekOffset === 0 && isToday) {
-            var ci = 0;
-            for (var k = 0; k < lessons.length; k++) {
-                if (lessons[k].lunch) { ci++; continue; }
-                if (ci === i) break;
-                ci++;
-            }
-            if (curBell >= 0 && ci === curBell) isActive = true;
+            if (curBell >= 0 && i === curBell) isActive = true;
             else if (isAfterSchool) past = true;
-            else if (lastEnded >= 0 && ci <= lastEnded) past = true;
+            else if (lastEnded >= 0 && i <= lastEnded) past = true;
         } else if (weekOffset === 0 && selectedDay >= 1 && selectedDay <= 5 && selectedDay !== todayDow) {
             if (todayDow === 0 || todayDow === 6 || todayDow > selectedDay) past = true;
         } else if (weekOffset < 0) {
