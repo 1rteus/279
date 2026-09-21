@@ -68,6 +68,7 @@
         <div class="tabs">
             <button class="tab active" data-t="hw">ДЗ</button>
             <button class="tab" data-t="rep">Замены</button>
+            <button class="tab" data-t="bell">Звонки</button>
         </div>
 
         <div id="p-hw" class="tab-panel active">
@@ -108,6 +109,19 @@
             <button class="btn btn-accent" onclick="addRep()">Добавить замену</button>
             <div class="section-label">Все замены на этой неделе</div>
             <div id="rep-all"></div>
+        </div>
+
+        <div id="p-bell" class="tab-panel">
+            <div class="field"><label>День недели</label>
+                <select id="bell-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
+            </div>
+            <div class="field"><label>Тип звонков</label>
+                <select id="bell-type"><option value="45">45 минут</option><option value="35">35 минут</option><option value="30">30 минут</option><option value="from5">с 5-го урока</option></select>
+            </div>
+            <div id="bell-msg"></div>
+            <button class="btn btn-accent" onclick="saveBell()">Добавить</button>
+            <div class="section-label">Расписание звонков</div>
+            <div id="bell-table"></div>
         </div>
 
         <div style="text-align:center;margin-top:24px">
@@ -212,8 +226,12 @@
             });
         });
 
+        document.getElementById("bell-day").addEventListener("change", loadBellForDay);
+        document.getElementById("bell-type").addEventListener("change", showBellPreview);
+
         loadHW();
         loadRep();
+        loadBellForDay();
     }
 
     function changeHWWeek(dir) {
@@ -430,6 +448,49 @@
                 var hwPath = "hw_" + getWeekKey(0);
                 FirebaseDB.set(hwPath, repEntry.hwSnapshot).then(function() { loadHW(); });
             }
+        });
+    }
+
+    var BELL_DATA = {
+        "45": [["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:10","12:55"],["13:15","14:00"],["14:10","14:55"],["15:05","15:50"],["16:00","16:45"]],
+        "35": [["08:30","09:05"],["09:10","09:45"],["09:50","10:25"],["10:30","11:05"],["11:10","11:45"],["11:50","12:25"],["12:30","13:05"],["13:10","13:45"],["13:50","14:25"]],
+        "30": [["08:30","09:00"],["09:05","09:35"],["09:40","10:10"],["10:15","10:45"],["10:50","11:20"],["11:25","11:55"],["12:00","12:30"],["12:35","13:05"],["13:10","13:40"]],
+        "from5": [["08:30","09:15"],["09:25","10:10"],["10:20","11:05"],["11:15","12:00"],["12:05","12:35"],["12:40","13:10"],["13:15","13:45"],["13:50","14:20"],["14:25","14:55"]]
+    };
+
+    var BELL_NAMES = {"45":"45 минут","35":"35 минут","30":"30 минут","from5":"с 5-го урока"};
+
+    function loadBellForDay() {
+        var day = document.getElementById("bell-day").value;
+        FirebaseDB.get("bell_modes", function(data) {
+            data = data || {};
+            var mode = data[String(day)] || "45";
+            document.getElementById("bell-type").value = mode;
+            showBellPreview();
+        });
+    }
+
+    function showBellPreview() {
+        var mode = document.getElementById("bell-type").value;
+        var bells = BELL_DATA[mode] || BELL_DATA["45"];
+        var html = '<div class="item" style="font-weight:700;font-size:0.8em;color:var(--accent);margin-bottom:4px">' + BELL_NAMES[mode] + '</div>';
+        for (var i = 0; i < bells.length; i++) {
+            html += '<div class="item"><div class="item-top"><span class="item-title">' + (i+1) + ' урок</span><span class="item-title">' + bells[i][0] + ' \u2013 ' + bells[i][1] + '</span></div></div>';
+        }
+        document.getElementById("bell-table").innerHTML = html;
+    }
+
+    function saveBell() {
+        var day = document.getElementById("bell-day").value;
+        var mode = document.getElementById("bell-type").value;
+        FirebaseDB.get("bell_modes", function(data) {
+            data = data || {};
+            data[String(day)] = mode;
+            FirebaseDB.set("bell_modes", data).then(function() {
+                document.getElementById("bell-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
+                setTimeout(function() { document.getElementById("bell-msg").innerHTML = ""; }, 2000);
+                showBellPreview();
+            });
         });
     }
 
