@@ -316,15 +316,26 @@
         });
     }
 
-    function findNextLesson(subject, day, num) {
-        var list = LESSONS[day] || [];
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].nm === subject && list[i].n > num) return { day: day, n: list[i].n };
-        }
-        for (var d = day + 1; d <= 5; d++) {
-            var l2 = LESSONS[d] || [];
-            for (var j = 0; j < l2.length; j++) {
-                if (l2[j].nm === subject) return { day: d, n: l2[j].n };
+    function lessonEndedToday(listIdx, day, bellModes) {
+        var mode = (bellModes && bellModes[String(day)]) || "45";
+        var bells = (BELL_DATA[mode] || BELL_DATA["45"]).bells;
+        var b = bells[listIdx] || bells[bells.length - 1];
+        var e = b[1].split(":");
+        var now = new Date();
+        return (now.getHours() * 60 + now.getMinutes()) > (parseInt(e[0]) * 60 + parseInt(e[1]));
+    }
+
+    function findNextLesson(subject, fromDay, fromN, bellModes) {
+        var today = new Date().getDay();
+        if (today === 0 || today === 6) return null;
+        for (var d = fromDay; d <= 5; d++) {
+            var list = LESSONS[d] || [];
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].nm !== subject) continue;
+                if (d === fromDay && list[i].n <= fromN) continue;
+                if (d < today) continue;
+                if (d === today && lessonEndedToday(i, d, bellModes)) continue;
+                return { day: d, n: list[i].n };
             }
         }
         return null;
@@ -364,25 +375,28 @@
             if (!text) { cb(null); return; }
 
             var insertText = subject + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[fromDay] + "): " + text;
-            var target = findNextLesson(subject, fromDay, fromN);
 
-            if (target) {
-                appendHw(hw, target.day, target.n, insertText);
-                FirebaseDB.set(hwPath, hw).then(function() {
-                    cb({ week: 0, day: target.day, n: target.n, fromDay: fromDay, fromN: fromN, text: insertText });
-                });
-            } else {
-                FirebaseDB.set(hwPath, hw);
-                var t2 = findFirstLesson(subject);
-                var nextPath = "hw_" + getWeekKey(1);
-                FirebaseDB.get(nextPath, function(nextHw) {
-                    nextHw = nextHw || {};
-                    appendHw(nextHw, t2.day, t2.n, insertText);
-                    FirebaseDB.set(nextPath, nextHw).then(function() {
-                        cb({ week: 1, day: t2.day, n: t2.n, fromDay: fromDay, fromN: fromN, text: insertText });
+            FirebaseDB.get("bell_modes", function(bellModes) {
+                var target = findNextLesson(subject, fromDay, fromN, bellModes);
+
+                if (target) {
+                    appendHw(hw, target.day, target.n, insertText);
+                    FirebaseDB.set(hwPath, hw).then(function() {
+                        cb({ week: 0, day: target.day, n: target.n, fromDay: fromDay, fromN: fromN, text: insertText });
                     });
-                });
-            }
+                } else {
+                    FirebaseDB.set(hwPath, hw);
+                    var t2 = findFirstLesson(subject);
+                    var nextPath = "hw_" + getWeekKey(1);
+                    FirebaseDB.get(nextPath, function(nextHw) {
+                        nextHw = nextHw || {};
+                        appendHw(nextHw, t2.day, t2.n, insertText);
+                        FirebaseDB.set(nextPath, nextHw).then(function() {
+                            cb({ week: 1, day: t2.day, n: t2.n, fromDay: fromDay, fromN: fromN, text: insertText });
+                        });
+                    });
+                }
+            });
         });
     }
 
