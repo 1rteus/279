@@ -316,12 +316,111 @@
         });
     }
 
+    function findNextLesson(subject, day, num) {
+        var list = LESSONS[day] || [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].nm === subject && list[i].n > num) return { day: day, n: list[i].n };
+        }
+        for (var d = day + 1; d <= 5; d++) {
+            var l2 = LESSONS[d] || [];
+            for (var j = 0; j < l2.length; j++) {
+                if (l2[j].nm === subject) return { day: d, n: l2[j].n };
+            }
+        }
+        return null;
+    }
+
+    function findFirstLesson(subject) {
+        for (var d = 1; d <= 5; d++) {
+            var l = LESSONS[d] || [];
+            for (var j = 0; j < l.length; j++) {
+                if (l[j].nm === subject) return { day: d, n: l[j].n };
+            }
+        }
+        return { day: 1, n: 1 };
+    }
+
+    function appendHw(hw, day, n, text) {
+        if (!hw[String(day)]) hw[String(day)] = [];
+        var arr = hw[String(day)];
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i].n === n) { arr[i].t += "\n\n" + text; return; }
+        }
+        arr.push({ n: n, t: text });
+    }
+
+    function doTransfer(fromDay, fromN, subject, cb) {
+        var hwPath = "hw_" + getWeekKey(0);
+        FirebaseDB.get(hwPath, function(hw) {
+            hw = hw || {};
+            var text = null;
+            var arr = hw[String(fromDay)];
+            if (arr) {
+                for (var i = 0; i < arr.length; i++) {
+                    if (arr[i].n === fromN) { text = arr[i].t; arr.splice(i, 1); break; }
+                }
+                if (arr.length === 0) delete hw[String(fromDay)];
+            }
+            if (!text) { cb(null); return; }
+
+            var insertText = subject + " (\u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e \u0438\u0437 " + DN[fromDay] + "): " + text;
+            var target = findNextLesson(subject, fromDay, fromN);
+
+            if (target) {
+                appendHw(hw, target.day, target.n, insertText);
+                FirebaseDB.set(hwPath, hw).then(function() {
+                    cb({ week: 0, day: target.day, n: target.n, fromDay: fromDay, fromN: fromN, text: insertText });
+                });
+            } else {
+                FirebaseDB.set(hwPath, hw);
+                var t2 = findFirstLesson(subject);
+                var nextPath = "hw_" + getWeekKey(1);
+                FirebaseDB.get(nextPath, function(nextHw) {
+                    nextHw = nextHw || {};
+                    appendHw(nextHw, t2.day, t2.n, insertText);
+                    FirebaseDB.set(nextPath, nextHw).then(function() {
+                        cb({ week: 1, day: t2.day, n: t2.n, fromDay: fromDay, fromN: fromN, text: insertText });
+                    });
+                });
+            }
+        });
+    }
+
+    function undoTransfer(tr, cb) {
+        var path = "hw_" + getWeekKey(tr.week);
+        FirebaseDB.get(path, function(hw) {
+            hw = hw || {};
+            var arr = hw[String(tr.day)];
+            if (arr) {
+                for (var i = 0; i < arr.length; i++) {
+                    if (arr[i].n === tr.n) {
+                        var t = arr[i].t;
+                        if (t === tr.text) {
+                            arr.splice(i, 1);
+                        } else {
+                            var p = t.indexOf(tr.text);
+                            if (p >= 0) {
+                                t = t.substring(0, p) + t.substring(p + tr.text.length);
+                                t = t.replace(/^\n\n+/, "").replace(/\n\n+$/, "");
+                                if (t) arr[i].t = t; else arr.splice(i, 1);
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (arr.length === 0) delete hw[String(tr.day)];
+            }
+            FirebaseDB.set(path, hw).then(function() { cb(); });
+        });
+    }
+
     function addRep() {
         var day = +document.getElementById("rep-day").value;
         var n = +document.getElementById("rep-num").value;
         var name = document.getElementById("rep-subject").value;
         var room = document.getElementById("rep-room").value.trim();
-        if (!name) { document.getElementById("rep-msg").innerHTML = '<div class="msg err">Выбери предмет</div>'; return; }
+        if (!name) { document.getElementById("rep-msg").innerHTML = '<div class="msg err">\u0412\u044b\u0431\u0435\u0440\u0438 \u043f\u0440\u0435\u0434\u043c\u0435\u0442</div>'; return; }
+        var origName = getLessonName(day, n);
 
         var now = new Date();
         var monday = getMonday(now);
@@ -335,26 +434,51 @@
             if (!reps[key]) reps[key] = [];
             var ex = -1;
             for (var i = 0; i < reps[key].length; i++) { if (reps[key][i].n === n) { ex = i; break; } }
-            var repObj = { n: n, name: name, room: room };
-            if (ex >= 0) reps[key][ex] = repObj; else reps[key].push(repObj);
-            FirebaseDB.set("reps", reps);
+            var old = ex >= 0 ? reps[key][ex] : null;
 
-            document.getElementById("rep-room").value = "";
-            document.getElementById("rep-msg").innerHTML = '<div class="msg ok">Замена добавлена</div>';
-            setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
-            loadRep();
+            function saveRep(transfer) {
+                var repObj = { n: n, name: name, room: room };
+                if (transfer) repObj.transfer = transfer;
+                if (ex >= 0) reps[key][ex] = repObj; else reps[key].push(repObj);
+                FirebaseDB.set("reps", reps).then(function() {
+                    document.getElementById("rep-room").value = "";
+                    document.getElementById("rep-msg").innerHTML = '<div class="msg ok">\u0417\u0430\u043c\u0435\u043d\u0430 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0430</div>';
+                    setTimeout(function() { document.getElementById("rep-msg").innerHTML = ""; }, 2000);
+                    loadRep();
+                    loadHW();
+                });
+            }
+
+            function afterUndo() {
+                if (origName !== name) {
+                    doTransfer(day, n, origName, function(transfer) { saveRep(transfer); });
+                } else {
+                    saveRep(null);
+                }
+            }
+
+            if (old && old.transfer) undoTransfer(old.transfer, afterUndo);
+            else afterUndo();
         });
     }
 
     function delRep(key, n) {
         FirebaseDB.get("reps", function(reps) {
             reps = reps || {};
+            var repEntry = null;
             if (reps[key]) {
+                for (var i = 0; i < reps[key].length; i++) {
+                    if (reps[key][i].n === n) { repEntry = reps[key][i]; break; }
+                }
                 reps[key] = reps[key].filter(function(r) { return r.n !== n; });
                 if (!reps[key].length) delete reps[key];
             }
             FirebaseDB.set("reps", reps);
             loadRep();
+
+            if (repEntry && repEntry.transfer) {
+                undoTransfer(repEntry.transfer, function() { loadHW(); });
+            }
         });
     }
 
