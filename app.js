@@ -119,7 +119,7 @@ function getBellsForDay(dayDow) {
 }
 
 function getLessons(day, hwData, repsData, weekOffset) {
-    var lessons = SCHEDULE[day] || [];
+    var lessons = (scheduleCache && scheduleCache[String(day)]) || SCHEDULE[day] || [];
     var wkData = getWeekDates(weekOffset);
     var dayIdx = day >= 1 && day <= 5 ? day - 1 : -1;
     var dateString = dayIdx >= 0 ? wkData.fullDates[dayIdx] : "";
@@ -215,6 +215,7 @@ var currentHW = {};
 var currentReps = {};
 var bellModesCache = {};
 var shortDaysCache = {};
+var scheduleCache = null;
 
 function render() {
     if (selectedDay < 0 || selectedDay > 6) selectedDay = todayDow;
@@ -348,6 +349,11 @@ function init() {
 
     FirebaseDB.onValue("short_days", function(data) {
         shortDaysCache = data || {};
+        render();
+    });
+
+    FirebaseDB.onValue("schedule", function(data) {
+        scheduleCache = data || null;
         render();
     });
 

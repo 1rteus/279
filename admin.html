@@ -69,6 +69,7 @@
             <button class="tab active" data-t="hw">ДЗ</button>
             <button class="tab" data-t="rep">Замены</button>
             <button class="tab" data-t="bell">Звонки</button>
+            <button class="tab" data-t="sched">Расписание</button>
         </div>
 
         <div id="p-hw" class="tab-panel active">
@@ -124,6 +125,17 @@
             <div id="bell-table"></div>
         </div>
 
+        <div id="p-sched" class="tab-panel">
+            <div class="field"><label>День недели</label>
+                <select id="sched-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
+            </div>
+            <div class="section-label">Уроки: предмет и кабинет</div>
+            <div id="sched-list"></div>
+            <div id="sched-msg"></div>
+            <button class="btn btn-green" onclick="saveSched()">Сохранить</button>
+            <button class="btn btn-red btn-sm" style="margin-left:8px" onclick="resetSched()">Сбросить день</button>
+        </div>
+
         <div style="text-align:center;margin-top:24px">
             <button class="btn btn-red btn-sm" onclick="localStorage.removeItem('admin_ok');location.reload()">Выйти</button>
         </div>
@@ -174,8 +186,95 @@
         return "Следующая";
     }
 
+    var schedCache = null;
+
+    function dayLessonList(day, data) {
+        var src = data || schedCache;
+        if (src && src[String(day)]) {
+            return src[String(day)].map(function(l) {
+                return { n: l.n, nm: l.name || "", rm: l.room || "", lunch: !!l.lunch };
+            });
+        }
+        var base = LESSONS[day] || [];
+        return base.map(function(l) {
+            return l.lunch ? { n: l.n, nm: "Обед", rm: "", lunch: true } : { n: l.n, nm: l.nm, rm: l.rm, lunch: false };
+        });
+    }
+
+    function escAttr(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function renderSchedRows(day, data) {
+        schedCache = data || {};
+        var list = dayLessonList(day, data);
+        var html = "";
+        for (var i = 0; i < list.length; i++) {
+            var l = list[i];
+            if (l.lunch) {
+                html += '<div class="item sched-row" data-n="' + l.n + '" data-lunch="1"><div class="item-top"><span class="item-title">Урок ' + l.n + '</span><span class="item-sub">Обед</span></div></div>';
+            } else {
+                html += '<div class="item sched-row" data-n="' + l.n + '" data-lunch="0">' +
+                    '<div class="item-top"><span class="item-title">Урок ' + l.n + '</span></div>' +
+                    '<div class="field" style="margin:8px 0 6px"><input class="sched-name" value="' + escAttr(l.nm) + '" placeholder="Предмет"></div>' +
+                    '<div class="field" style="margin:0"><input class="sched-room" value="' + escAttr(l.rm) + '" placeholder="Кабинет"></div>' +
+                    '</div>';
+            }
+        }
+        document.getElementById("sched-list").innerHTML = html;
+        document.getElementById("sched-msg").innerHTML = "";
+    }
+
+    function loadSchedForDay() {
+        var day = document.getElementById("sched-day").value;
+        FirebaseDB.get("schedule", function(data) {
+            renderSchedRows(day, data || {});
+        });
+    }
+
+    function saveSched() {
+        var day = document.getElementById("sched-day").value;
+        var rows = document.querySelectorAll("#sched-list .sched-row");
+        var arr = [];
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            var n = +r.getAttribute("data-n");
+            if (r.getAttribute("data-lunch") === "1") {
+                arr.push({ n: n, name: "Обед", room: "", lunch: true });
+            } else {
+                var nm = r.querySelector(".sched-name").value.trim();
+                var rm = r.querySelector(".sched-room").value.trim();
+                if (!nm) continue;
+                arr.push({ n: n, name: nm, room: rm });
+            }
+        }
+        FirebaseDB.get("schedule", function(data) {
+            data = data || {};
+            data[String(day)] = arr;
+            FirebaseDB.set("schedule", data).then(function() {
+                schedCache = data;
+                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
+                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+            });
+        });
+    }
+
+    function resetSched() {
+        var day = document.getElementById("sched-day").value;
+        FirebaseDB.get("schedule", function(data) {
+            data = data || {};
+            delete data[String(day)];
+            FirebaseDB.set("schedule", data).then(function() {
+                schedCache = data;
+                loadSchedForDay();
+                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сброшено</div>';
+                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+            });
+        });
+    }
+
     function getLessonName(day, n) {
-        var list = LESSONS[day] || [];
+        var list = dayLessonList(day);
         for (var i = 0; i < list.length; i++) {
             if (list[i].n === n) return list[i].nm;
         }
@@ -228,10 +327,16 @@
 
         document.getElementById("bell-day").addEventListener("change", loadBellForDay);
         document.getElementById("bell-type").addEventListener("change", showBellPreview);
+        document.getElementById("sched-day").addEventListener("change", loadSchedForDay);
+
+        FirebaseDB.onValue("schedule", function(data) {
+            schedCache = data || {};
+        });
 
         loadHW();
         loadRep();
         loadBellForDay();
+        loadSchedForDay();
     }
 
     function changeHWWeek(dir) {
@@ -329,7 +434,7 @@
         var today = new Date().getDay();
         if (today === 0 || today === 6) return null;
         for (var d = fromDay; d <= 5; d++) {
-            var list = LESSONS[d] || [];
+            var list = dayLessonList(d);
             for (var i = 0; i < list.length; i++) {
                 if (list[i].nm !== subject) continue;
                 if (d === fromDay && list[i].n <= fromN) continue;
@@ -343,7 +448,7 @@
 
     function findFirstLesson(subject) {
         for (var d = 1; d <= 5; d++) {
-            var l = LESSONS[d] || [];
+            var l = dayLessonList(d);
             for (var j = 0; j < l.length; j++) {
                 if (l[j].nm === subject) return { day: d, n: l[j].n };
             }
