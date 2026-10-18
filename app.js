@@ -251,6 +251,13 @@ function render() {
         return;
     }
 
+    if (selectedDay === 1) {
+        document.getElementById("now-banner").classList.add("hidden");
+        sched.innerHTML = '<div class="po-nah">\u041f\u041e \u043d\u0430\u0445</div>';
+        document.getElementById("current-date").textContent = wkData.fullDates[0];
+        return;
+    }
+
     var banner = document.getElementById("now-banner");
     var isToday = todayDow === selectedDay && weekOffset === 0;
     var isAfterSchool = isToday && curBell === -2;
