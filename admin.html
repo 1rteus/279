@@ -129,9 +129,9 @@
             <div class="field"><label>День недели</label>
                 <select id="sched-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
             </div>
-            <div class="field" style="display:flex;align-items:center;gap:12px">
-                <label style="margin:0;flex:1">ПО — отключить уроки (показать «ПО нах»)</label>
-                <input type="checkbox" id="sched-po" style="width:auto;transform:scale(1.5)">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:12px;padding:11px 14px;margin-bottom:14px">
+                <span style="font-weight:700;font-size:0.95em">ПО</span>
+                <input type="checkbox" id="sched-po" onchange="savePo()" style="width:26px;height:26px;margin:0;cursor:pointer;accent-color:#6c5ce7">
             </div>
             <div class="section-label">Уроки: предмет и кабинет</div>
             <div id="sched-list"></div>
@@ -301,20 +301,26 @@
                 arr.push({ n: n, name: subj, room: SUBJECT_ROOMS[subj] || "" });
             }
         }
-        var po = document.getElementById("sched-po").checked;
         FirebaseDB.get("schedule", function(data) {
             data = data || {};
             data[String(day)] = arr;
             FirebaseDB.set("schedule", data).then(function() {
                 schedCache = data;
-                FirebaseDB.get("po_days", function(pd) {
-                    pd = pd || {};
-                    if (po) pd[String(day)] = true; else delete pd[String(day)];
-                    FirebaseDB.set("po_days", pd).then(function() {
-                        document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
-                        setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
-                    });
-                });
+                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
+                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+            });
+        });
+    }
+
+    function savePo() {
+        var day = document.getElementById("sched-day").value;
+        var po = document.getElementById("sched-po").checked;
+        FirebaseDB.get("po_days", function(pd) {
+            pd = pd || {};
+            if (po) pd[String(day)] = true; else delete pd[String(day)];
+            FirebaseDB.set("po_days", pd).then(function() {
+                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">ПО ' + (po ? "включено" : "выключено") + '</div>';
+                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
             });
         });
     }
