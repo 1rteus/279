@@ -216,6 +216,7 @@ var currentReps = {};
 var bellModesCache = {};
 var shortDaysCache = {};
 var scheduleCache = null;
+var poDaysCache = null;
 
 function render() {
     if (selectedDay < 0 || selectedDay > 6) selectedDay = todayDow;
@@ -252,10 +253,11 @@ function render() {
         return;
     }
 
-    if (selectedDay === 1) {
+    if (poDaysCache && poDaysCache[String(selectedDay)]) {
         document.getElementById("now-banner").classList.add("hidden");
         sched.innerHTML = '<div class="po-nah">\u041f\u041e \u043d\u0430\u0445</div>';
-        document.getElementById("current-date").textContent = wkData.fullDates[0];
+        var poIdx = (selectedDay >= 1 && selectedDay <= 5) ? selectedDay - 1 : 0;
+        document.getElementById("current-date").textContent = wkData.fullDates[poIdx];
         return;
     }
 
@@ -354,6 +356,11 @@ function init() {
 
     FirebaseDB.onValue("schedule", function(data) {
         scheduleCache = data || null;
+        render();
+    });
+
+    FirebaseDB.onValue("po_days", function(data) {
+        poDaysCache = data || null;
         render();
     });
 

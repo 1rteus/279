@@ -129,6 +129,10 @@
             <div class="field"><label>День недели</label>
                 <select id="sched-day"><option value="1">Понедельник</option><option value="2">Вторник</option><option value="3">Среда</option><option value="4">Четверг</option><option value="5">Пятница</option></select>
             </div>
+            <div class="field" style="display:flex;align-items:center;gap:12px">
+                <label style="margin:0;flex:1">ПО — отключить уроки (показать «ПО нах»)</label>
+                <input type="checkbox" id="sched-po" style="width:auto;transform:scale(1.5)">
+            </div>
             <div class="section-label">Уроки: предмет и кабинет</div>
             <div id="sched-list"></div>
             <div id="sched-msg"></div>
@@ -188,6 +192,33 @@
 
     var schedCache = null;
 
+    var SCHED_SUBJECTS = ALL_SUBJECTS.concat(["Информа", "Обед"]);
+
+    var SUBJECT_ROOMS = {
+        "Материаловед": "201",
+        "ФКиз": "2",
+        "Биология": "305",
+        "СПТ сл-ремонтн": "201",
+        "Допуски, пос": "401",
+        "Общ курс сл д": "110",
+        "Химия": "301",
+        "Ин язык": "306",
+        "Математика": "405",
+        "ннф час": "210",
+        "География": "305",
+        "Информатика": "210",
+        "Защита насел": "403",
+        "Ист Бел в к ВИ": "101",
+        "Бел язык": "111",
+        "Бел литерат": "111",
+        "Физика": "308",
+        "курат час": "101",
+        "Рус язык": "404",
+        "Рус литерат": "404",
+        "Информа": "210",
+        "Обед": ""
+    };
+
     function dayLessonList(day, data) {
         var src = data || schedCache;
         if (src && src[String(day)]) {
@@ -205,21 +236,38 @@
         return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
+    function subjectOptions(selected) {
+        var subs = SCHED_SUBJECTS.slice();
+        if (selected && subs.indexOf(selected) === -1) subs.unshift(selected);
+        var html = "";
+        for (var i = 0; i < subs.length; i++) {
+            var s = subs[i];
+            html += '<option value="' + escAttr(s) + '"' + (s === selected ? " selected" : "") + '>' + escAttr(s) + '</option>';
+        }
+        return html;
+    }
+
+    function schedSubjectChanged(sel) {
+        var row = sel.closest(".sched-row");
+        if (!row) return;
+        var roomEl = row.querySelector(".sched-room");
+        if (!roomEl) return;
+        var rm = SUBJECT_ROOMS[sel.value] || "";
+        roomEl.textContent = rm ? ("каб. " + rm) : "";
+    }
+
     function renderSchedRows(day, data) {
         schedCache = data || {};
         var list = dayLessonList(day, data);
         var html = "";
         for (var i = 0; i < list.length; i++) {
             var l = list[i];
-            if (l.lunch) {
-                html += '<div class="item sched-row" data-n="' + l.n + '" data-lunch="1"><div class="item-top"><span class="item-title">Урок ' + l.n + '</span><span class="item-sub">Обед</span></div></div>';
-            } else {
-                html += '<div class="item sched-row" data-n="' + l.n + '" data-lunch="0">' +
-                    '<div class="item-top"><span class="item-title">Урок ' + l.n + '</span></div>' +
-                    '<div class="field" style="margin:8px 0 6px"><input class="sched-name" value="' + escAttr(l.nm) + '" placeholder="Предмет"></div>' +
-                    '<div class="field" style="margin:0"><input class="sched-room" value="' + escAttr(l.rm) + '" placeholder="Кабинет"></div>' +
-                    '</div>';
-            }
+            var rm = SUBJECT_ROOMS[l.nm];
+            if (rm === undefined) rm = l.rm || "";
+            html += '<div class="item sched-row" data-n="' + l.n + '">' +
+                '<div class="item-top"><span class="item-title">Урок ' + l.n + '</span><span class="item-sub sched-room">' + (rm ? "каб. " + escAttr(rm) : "") + '</span></div>' +
+                '<div class="field" style="margin:8px 0 0"><select class="sched-subj" onchange="schedSubjectChanged(this)">' + subjectOptions(l.nm) + '</select></div>' +
+                '</div>';
         }
         document.getElementById("sched-list").innerHTML = html;
         document.getElementById("sched-msg").innerHTML = "";
@@ -228,7 +276,12 @@
     function loadSchedForDay() {
         var day = document.getElementById("sched-day").value;
         FirebaseDB.get("schedule", function(data) {
-            renderSchedRows(day, data || {});
+            FirebaseDB.get("po_days", function(po) {
+                po = po || {};
+                var chk = document.getElementById("sched-po");
+                if (chk) chk.checked = !!po[String(day)];
+                renderSchedRows(day, data || {});
+            });
         });
     }
 
@@ -239,22 +292,29 @@
         for (var i = 0; i < rows.length; i++) {
             var r = rows[i];
             var n = +r.getAttribute("data-n");
-            if (r.getAttribute("data-lunch") === "1") {
+            var subjSel = r.querySelector(".sched-subj");
+            var subj = subjSel ? subjSel.value : "";
+            if (!subj) continue;
+            if (subj === "Обед") {
                 arr.push({ n: n, name: "Обед", room: "", lunch: true });
             } else {
-                var nm = r.querySelector(".sched-name").value.trim();
-                var rm = r.querySelector(".sched-room").value.trim();
-                if (!nm) continue;
-                arr.push({ n: n, name: nm, room: rm });
+                arr.push({ n: n, name: subj, room: SUBJECT_ROOMS[subj] || "" });
             }
         }
+        var po = document.getElementById("sched-po").checked;
         FirebaseDB.get("schedule", function(data) {
             data = data || {};
             data[String(day)] = arr;
             FirebaseDB.set("schedule", data).then(function() {
                 schedCache = data;
-                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
-                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+                FirebaseDB.get("po_days", function(pd) {
+                    pd = pd || {};
+                    if (po) pd[String(day)] = true; else delete pd[String(day)];
+                    FirebaseDB.set("po_days", pd).then(function() {
+                        document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сохранено</div>';
+                        setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+                    });
+                });
             });
         });
     }
@@ -266,9 +326,15 @@
             delete data[String(day)];
             FirebaseDB.set("schedule", data).then(function() {
                 schedCache = data;
-                loadSchedForDay();
-                document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сброшено</div>';
-                setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+                FirebaseDB.get("po_days", function(pd) {
+                    pd = pd || {};
+                    delete pd[String(day)];
+                    FirebaseDB.set("po_days", pd).then(function() {
+                        loadSchedForDay();
+                        document.getElementById("sched-msg").innerHTML = '<div class="msg ok">Сброшено</div>';
+                        setTimeout(function() { document.getElementById("sched-msg").innerHTML = ""; }, 2000);
+                    });
+                });
             });
         });
     }
