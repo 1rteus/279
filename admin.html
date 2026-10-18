@@ -239,7 +239,7 @@
     function subjectOptions(selected) {
         var subs = SCHED_SUBJECTS.slice();
         if (selected && subs.indexOf(selected) === -1) subs.unshift(selected);
-        var html = "";
+        var html = '<option value=""' + (!selected ? " selected" : "") + '>ничего</option>';
         for (var i = 0; i < subs.length; i++) {
             var s = subs[i];
             html += '<option value="' + escAttr(s) + '"' + (s === selected ? " selected" : "") + '>' + escAttr(s) + '</option>';
@@ -258,15 +258,19 @@
 
     function renderSchedRows(day, data) {
         schedCache = data || {};
-        var list = dayLessonList(day, data);
+        var items = dayLessonList(day, data);
+        var map = {};
+        for (var i = 0; i < items.length; i++) {
+            map[items[i].n] = items[i].lunch ? "Обед" : items[i].nm;
+        }
         var html = "";
-        for (var i = 0; i < list.length; i++) {
-            var l = list[i];
-            var rm = SUBJECT_ROOMS[l.nm];
-            if (rm === undefined) rm = l.rm || "";
-            html += '<div class="item sched-row" data-n="' + l.n + '">' +
-                '<div class="item-top"><span class="item-title">Урок ' + l.n + '</span><span class="item-sub sched-room">' + (rm ? "каб. " + escAttr(rm) : "") + '</span></div>' +
-                '<div class="field" style="margin:8px 0 0"><select class="sched-subj" onchange="schedSubjectChanged(this)">' + subjectOptions(l.nm) + '</select></div>' +
+        for (var n = 1; n <= 9; n++) {
+            var sel = map[n] || "";
+            var rm = sel ? SUBJECT_ROOMS[sel] : "";
+            if (rm === undefined) rm = "";
+            html += '<div class="item sched-row" data-n="' + n + '">' +
+                '<div class="item-top"><span class="item-title">Урок ' + n + '</span><span class="item-sub sched-room">' + (rm ? "каб. " + escAttr(rm) : "") + '</span></div>' +
+                '<div class="field" style="margin:8px 0 0"><select class="sched-subj" onchange="schedSubjectChanged(this)">' + subjectOptions(sel) + '</select></div>' +
                 '</div>';
         }
         document.getElementById("sched-list").innerHTML = html;
