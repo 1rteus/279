@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#221b3d"/>
+      <stop offset="55%" stop-color="#0e0e18"/>
+      <stop offset="100%" stop-color="#07070c"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6c5ce7" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6c5ce7" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="sh" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="220" r="190" fill="url(#glow)"/>
+
+  <!-- shelf -->
+  <g filter="url(#sh)">
+    <rect x="70" y="408" width="372" height="16" rx="8" fill="#3c3c52"/>
+  </g>
+
+  <!-- books (bottom to top) -->
+  <g filter="url(#sh)">
+    <!-- book 1 -->
+    <g>
+      <rect x="86" y="362" width="340" height="46" rx="10" fill="#e74c3c"/>
+      <rect x="86" y="401" width="340" height="7" rx="3" fill="#a93226" opacity="0.55"/>
+      <rect x="106" y="371" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="120" y="371" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+    <!-- book 2 -->
+    <g>
+      <rect x="112" y="308" width="300" height="46" rx="10" fill="#6c5ce7"/>
+      <rect x="112" y="347" width="300" height="7" rx="3" fill="#4a3fc0" opacity="0.6"/>
+      <rect x="132" y="317" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="146" y="317" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+    <!-- book 3 -->
+    <g>
+      <rect x="80" y="254" width="352" height="46" rx="10" fill="#00b8a9"/>
+      <rect x="80" y="293" width="352" height="7" rx="3" fill="#00897b" opacity="0.6"/>
+      <rect x="100" y="263" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="114" y="263" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+    <!-- book 4 -->
+    <g>
+      <rect x="106" y="200" width="308" height="46" rx="10" fill="#f39c12"/>
+      <rect x="106" y="239" width="308" height="7" rx="3" fill="#c87f0a" opacity="0.6"/>
+      <rect x="126" y="209" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="140" y="209" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+    <!-- book 5 -->
+    <g>
+      <rect x="92" y="146" width="330" height="46" rx="10" fill="#3498db"/>
+      <rect x="92" y="185" width="330" height="7" rx="3" fill="#2471a3" opacity="0.6"/>
+      <rect x="112" y="155" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="126" y="155" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+    <!-- book 6 (top) -->
+    <g>
+      <rect x="118" y="92" width="290" height="46" rx="10" fill="#e84393"/>
+      <rect x="118" y="131" width="290" height="7" rx="3" fill="#b02f6e" opacity="0.6"/>
+      <rect x="138" y="101" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.38"/>
+      <rect x="152" y="101" width="7" height="28" rx="3.5" fill="#ffffff" opacity="0.24"/>
+    </g>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-var CACHE_VERSION = "v2";
+var CACHE_VERSION = "v3";
 var CACHE_NAME = "schedule-" + CACHE_VERSION;
 
 self.addEventListener("install", function(e) {
